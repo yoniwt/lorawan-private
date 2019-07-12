@@ -49,6 +49,10 @@ def build(bld):
         'model/lora-radio-energy-model.cc',
         'model/lora-tx-current-model.cc',
         'model/lora-utils.cc',
+        'model/class-b/aes.cc',
+        'model/class-b/bcn-payload.cc',
+        'model/class-b/end-device-class-b-app.cc',
+        'model/class-b/hop-count-tag.cc',
         'helper/lora-radio-energy-model-helper.cc',
         'helper/lora-helper.cc',
         'helper/lora-phy-helper.cc',
@@ -59,6 +63,8 @@ def build(bld):
         'helper/network-server-helper.cc',
         'helper/simple-network-server-helper.cc',
         'helper/lora-packet-tracker.cc',
+        'helper/class-b/end-device-class-b-app-helper.cc',
+        'helper/class-b/lora-class-b-analyzer.cc',
         'test/utilities.cc',
         ]
 
@@ -110,6 +116,10 @@ def build(bld):
         'model/lora-radio-energy-model.h',
         'model/lora-tx-current-model.h',
         'model/lora-utils.h',
+        'model/class-b/aes.h',
+        'model/class-b/bcn-payload.h',
+        'model/class-b/end-device-class-b-app.h',
+        'model/class-b/hop-count-tag.h',
         'helper/lora-radio-energy-model-helper.h',
         'helper/lora-helper.h',
         'helper/lora-phy-helper.h',
@@ -120,6 +130,8 @@ def build(bld):
         'helper/network-server-helper.h',
         'helper/simple-network-server-helper.h',
         'helper/lora-packet-tracker.h',
+        'helper/class-b/end-device-class-b-app-helper.h',
+        'helper/class-b/lora-class-b-analyzer.h',
         'test/utilities.h',
         ]
 

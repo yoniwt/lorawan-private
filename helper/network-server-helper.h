@@ -60,6 +60,28 @@ public:
    * Set which end devices will be managed by this NS.
    */
   void SetEndDevices (NodeContainer endDevices);
+  
+  /**
+   * To Enable the servers for the class B downlink transmission
+   * 
+   * \param enable true to enable class B downlink transmission and false to 
+   * disable
+   */
+  void EnableClassBDownlink (bool enable);
+  
+  /**
+   * To enable the servers for beacon transmission
+   * 
+   * \param enable true to enable beacon transmission and false to disable
+   */
+  void EnableBeaconTransmission (bool enable);
+  
+  /**
+   * Enable Fragmented Data Generation which leads to sequenced packet generation
+   * 
+   * \param enable if true it enables the sequenced packet generation
+   */
+  void EnableSequencedPacketGeneration (bool enable);
 
 private:
   void InstallComponents (Ptr<NetworkServer> netServer);
@@ -72,6 +94,21 @@ private:
   NodeContainer m_endDevices;   //!< Set of endDevices to connect to this NS
 
   PointToPointHelper p2pHelper; //!< Helper to create PointToPoint links
+  
+  /**
+   * This is enabled when a class B enabled gateway is added to the server
+   */
+  bool m_classBEnabled;
+  
+  /**
+   * This is enabled when a beacon transmitting gateway is added to the server
+   */
+  bool m_beaconEnabled;
+  
+  /**
+   * To enable sequenced packet generation
+   */
+  bool m_enableSequencedPacketGeneration;
 };
 
 } // namespace ns3

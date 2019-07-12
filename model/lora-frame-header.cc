@@ -20,6 +20,7 @@
 
 #include "ns3/lora-frame-header.h"
 #include "ns3/log.h"
+#include "src/core/model/assert.h"
 #include <bitset>
 
 namespace ns3 {
@@ -34,7 +35,7 @@ LoraFrameHeader::LoraFrameHeader () :
   m_adr       (0),
   m_adrAckReq (0),
   m_ack       (0),
-  m_fPending  (0),
+  m_fPendingClassB  (0),
   m_fOptsLen  (0),
   m_fCnt      (0)
 {
@@ -87,7 +88,7 @@ LoraFrameHeader::Serialize (Buffer::Iterator start) const
   fCtrl |= uint8_t (m_adr << 6 & 0b1000000);
   fCtrl |= uint8_t (m_adrAckReq << 5 & 0b100000);
   fCtrl |= uint8_t (m_ack << 4 & 0b10000);
-  fCtrl |= uint8_t (m_fPending << 3 & 0b1000);
+  fCtrl |= uint8_t (m_fPendingClassB << 3 & 0b1000);
   fCtrl |= m_fOptsLen & 0b111;
   start.WriteU8 (fCtrl);
 
@@ -119,7 +120,7 @@ LoraFrameHeader::Deserialize (Buffer::Iterator start)
   m_adr = (fCtl >> 6) & 0b1;
   m_adrAckReq = (fCtl >> 5) & 0b1;
   m_ack = (fCtl >> 4) & 0b1;
-  m_fPending = (fCtl >> 3) & 0b1;
+  m_fPendingClassB = (fCtl >> 3) & 0b1;
   m_fOptsLen = fCtl & 0b111;
   m_fCnt = start.ReadU16 ();
 
@@ -128,7 +129,7 @@ LoraFrameHeader::Deserialize (Buffer::Iterator start)
   NS_LOG_DEBUG ("ADR: " << unsigned(m_adr));
   NS_LOG_DEBUG ("ADRAckReq: " << unsigned (m_adrAckReq));
   NS_LOG_DEBUG ("Ack: " << unsigned (m_ack));
-  NS_LOG_DEBUG ("fPending: " << unsigned (m_fPending));
+  NS_LOG_DEBUG ("fPending: " << unsigned (m_fPendingClassB));
   NS_LOG_DEBUG ("fOptsLen: " << unsigned (m_fOptsLen));
   NS_LOG_DEBUG ("fCnt: " << unsigned (m_fCnt));
 
@@ -319,7 +320,7 @@ LoraFrameHeader::Print (std::ostream &os) const
   os << "ADR=" << m_adr << std::endl;
   os << "ADRAckReq=" << m_adrAckReq << std::endl;
   os << "ACK=" << m_ack << std::endl;
-  os << "FPending=" << m_fPending << std::endl;
+  os << "FPending=" << m_fPendingClassB << std::endl;
   os << "FOptsLen=" << unsigned(m_fOptsLen) << std::endl;
   os << "FCnt=" << unsigned(m_fCnt) << std::endl;
 
@@ -409,12 +410,28 @@ LoraFrameHeader::GetAck (void) const
 void
 LoraFrameHeader::SetFPending (bool fPending)
 {
-  m_fPending = fPending;
+  NS_ASSERT_MSG (m_isUplink==false, "FPending is only for downlink packet!" );
+  m_fPendingClassB = fPending;
 }
 bool
 LoraFrameHeader::GetFPending (void) const
 {
-  return m_fPending;
+  NS_ASSERT_MSG (m_isUplink==false, "FPending is only for downlink packet!" );
+  return m_fPendingClassB;
+}
+
+void
+LoraFrameHeader::SetClassB (bool classB)
+{
+  NS_ASSERT_MSG (m_isUplink==true, "FPending is only for downlink packet!" );
+  m_fPendingClassB = classB;
+}
+
+bool
+LoraFrameHeader::GetClassB () const
+{
+  NS_ASSERT_MSG (m_isUplink==true, "FPending is only for downlink packet!" );
+  return m_fPendingClassB;
 }
 
 uint8_t

@@ -99,13 +99,48 @@ public:
                 uint16_t protocol, const Address& address);
 
   Ptr<NetworkStatus> GetNetworkStatus (void);
+  
+  Ptr<NetworkScheduler> GetNetworkScheduler (void); 
 
+  /**
+   * To Enable the server for the class B downlink transmission
+   * 
+   * \param enable true to enable class B downlink transmission and false to 
+   * disable
+   */
+  void EnableClassBDownlink (bool enable);
+  
+  /**
+   * To Enable the server for beacon transmission
+   * 
+   * \param enable true to enable beacon transmission and false to disable
+   */
+  void EnableBeaconTransmission (bool enable);
+  
+  /**
+   * Enable Fragmented Data Generation which leads to sequenced packet generation
+   * 
+   * \param enable if true it enables the sequenced packet generation
+   */
+  void EnableSequencedPacketGeneration (bool enable);
+  
 protected:
   Ptr<NetworkStatus> m_status;
   Ptr<NetworkController> m_controller;
   Ptr<NetworkScheduler> m_scheduler;
 
   TracedCallback<Ptr<const Packet> > m_receivedPacket;
+  
+  /**
+   * This is enabled when a class B enabled gateway is added to the server
+   */
+  bool m_classBEnabled;
+  
+  /**
+   * This is enabled when a beacon transmitting gateway is added to the server
+   */
+  bool m_beaconEnabled;
+  
 };
 
 } /* namespace ns3 */

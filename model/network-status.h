@@ -28,6 +28,7 @@
 #include "ns3/gateway-status.h"
 #include "ns3/lora-device-address.h"
 #include "ns3/network-scheduler.h"
+#include "ns3/traced-value.h"
 
 namespace ns3 {
 namespace lorawan {
@@ -107,10 +108,40 @@ public:
    * Get the EndDeviceStatus corresponding to a LoraDeviceAddress.
    */
   Ptr<EndDeviceStatus> GetEndDeviceStatus (LoraDeviceAddress address);
+  
+  /**
+   * Broadcasts through all beacon enabled gateways
+   * 
+   * \return the time stamp included in the bcnPayload, 0 if beacon is not sent
+   */
+  uint32_t BroadcastBeacon (void);
+  
+  /**
+   * Multicasts a packet to a multicast group using the geteways assigned to that group
+   * 
+   * \param packet the appPayload to be multicasted
+   * \param mcAddress the multicast address for which to do the transmission
+   * 
+   * \return the number of gateways that successfully transmitted the multicast
+   */
+  uint8_t MulticastPacket (Ptr<Packet const> packet, LoraDeviceAddress mcAddress);
 
 public:
-  std::map<LoraDeviceAddress, Ptr<EndDeviceStatus> > m_endDeviceStatuses;
+  typedef std::map<LoraDeviceAddress, Ptr<EndDeviceStatus> > EndDeviceStatusMap;
+  typedef std::map<LoraDeviceAddress, EndDeviceStatusMap > McEndDeviceStatusMap;
+  
+  EndDeviceStatusMap m_endDeviceStatuses;
   std::map<Address, Ptr<GatewayStatus> > m_gatewayStatuses;
+  
+  McEndDeviceStatusMap m_mcEndDeviceStatuses; ///< For corsponding the unicast and the multicat address
+
+private:  
+  uint8_t m_beaconDr; ///< beacon DR to be used, default is 3
+  double m_beaconFrequency; ///< beacon Frequency to be used, default is 869.525
+
+  /// Tracesources
+  TracedValue<uint8_t> m_lastBeaconTransmittingGateways;
+  TracedValue<uint8_t> m_lastMulticastTransmittingGateways; 
 };
 
 } /* namespace ns3 */

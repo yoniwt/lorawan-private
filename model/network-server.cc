@@ -54,9 +54,9 @@ NetworkServer::GetTypeId (void)
 }
 
 NetworkServer::NetworkServer () :
-  m_status (Create<NetworkStatus> ()),
+  m_status (CreateObject<NetworkStatus> ()),
   m_controller (Create<NetworkController> (m_status)),
-  m_scheduler (Create<NetworkScheduler> (m_status, m_controller))
+  m_scheduler (CreateObject<NetworkScheduler> (m_status, m_controller))
 {
   NS_LOG_FUNCTION_NOARGS ();
 }
@@ -70,6 +70,10 @@ void
 NetworkServer::StartApplication (void)
 {
   NS_LOG_FUNCTION_NOARGS ();
+  if (m_beaconEnabled)
+    {
+      m_scheduler->BroadcastBeacon (true);
+    }
 }
 
 void
@@ -185,6 +189,30 @@ Ptr<NetworkStatus>
 NetworkServer::GetNetworkStatus (void)
 {
   return m_status;
+}
+
+Ptr<NetworkScheduler>
+NetworkServer::GetNetworkScheduler ()
+{
+  return Ptr<NetworkScheduler> (static_cast<NetworkScheduler *>(PeekPointer(m_scheduler)));
+}
+
+void
+NetworkServer::EnableClassBDownlink (bool enable)
+{
+  m_classBEnabled = enable;
+}
+
+void
+NetworkServer::EnableBeaconTransmission (bool enable)
+{
+  m_beaconEnabled = enable;
+}
+
+void 
+NetworkServer::EnableSequencedPacketGeneration (bool enable)
+{
+  m_scheduler->EnableSequencedPacketGeneration (enable);
 }
 
 }

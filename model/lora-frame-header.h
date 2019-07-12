@@ -169,19 +169,37 @@ public:
   bool GetAck (void) const;
 
   /**
-   * Set the FPending value.
+   * For downlink, set the FPending value.
    *
    * \param fPending The FPending to set.
    */
   void SetFPending (bool fPending);
 
   /**
-   * Get the FPending value.
+   * For downlink, get the FPending value.
    *
    * \return The FPending value.
    */
   bool GetFPending (void) const;
+  
+  /**
+   * For uplink, set the class B bit
+   *
+   * Uses the same bit as the FPending
+   * 
+   * \param classB The ClassB to set.
+   */
+  void SetClassB (bool classB);
 
+  /**
+   * For uplink, get the class B bit.
+   *
+   * Uses the same bit a the FPending
+   * 
+   * \return The ClassB bit.
+   */
+  bool GetClassB (void) const;
+  
   /**
    * Get the FOptsLen value.
    *
@@ -303,7 +321,7 @@ private:
   bool m_adr;
   bool m_adrAckReq;
   bool m_ack;
-  bool m_fPending;
+  bool m_fPendingClassB;
   uint8_t m_fOptsLen;
 
   uint16_t m_fCnt;

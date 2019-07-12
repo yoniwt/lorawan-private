@@ -36,6 +36,9 @@ NetworkServerHelper::NetworkServerHelper ()
   m_factory.SetTypeId ("ns3::NetworkServer");
   p2pHelper.SetDeviceAttribute ("DataRate", StringValue ("5Mbps"));
   p2pHelper.SetChannelAttribute ("Delay", StringValue ("2ms"));
+  m_classBEnabled = false;
+  m_beaconEnabled = false;
+  m_enableSequencedPacketGeneration = false;
 }
 
 NetworkServerHelper::~NetworkServerHelper ()
@@ -58,6 +61,25 @@ void
 NetworkServerHelper::SetEndDevices (NodeContainer endDevices)
 {
   m_endDevices = endDevices;
+}
+
+
+void
+NetworkServerHelper::EnableClassBDownlink (bool enable)
+{
+  m_classBEnabled = enable;
+}
+
+void
+NetworkServerHelper::EnableBeaconTransmission (bool enable)
+{
+  m_beaconEnabled = enable;
+}
+
+void 
+NetworkServerHelper::EnableSequencedPacketGeneration (bool enable)
+{
+  m_enableSequencedPacketGeneration = enable;
 }
 
 ApplicationContainer
@@ -87,6 +109,11 @@ NetworkServerHelper::InstallPriv (Ptr<Node> node)
 
   app->SetNode (node);
   node->AddApplication (app);
+  
+  // Configuring the app
+  app->EnableClassBDownlink (m_classBEnabled);
+  app->EnableBeaconTransmission (m_beaconEnabled);
+  app->EnableSequencedPacketGeneration (m_enableSequencedPacketGeneration);
 
   // Cycle on each gateway
   for (NodeContainer::Iterator i = m_gateways.Begin ();

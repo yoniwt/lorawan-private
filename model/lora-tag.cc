@@ -49,7 +49,8 @@ LoraTag::LoraTag (uint8_t sf, uint8_t destroyedBy) :
   m_destroyedBy (destroyedBy),
   m_receivePower (0),
   m_dataRate (0),
-  m_frequency (0)
+  m_frequency (0),
+  m_enableBeacon (false)
 {
 }
 
@@ -152,5 +153,16 @@ LoraTag::SetDataRate (uint8_t dataRate)
   m_dataRate = dataRate;
 }
 
+void
+LoraTag::SetAsBeaconPacket (bool enableBeacon)
+{
+  m_enableBeacon = enableBeacon;
+}
+
+bool
+LoraTag::IsBeaconPacket (void)
+{
+  return m_enableBeacon;
+}
 }
 } // namespace ns3

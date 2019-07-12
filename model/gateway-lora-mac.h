@@ -24,6 +24,8 @@
 #include "ns3/lora-mac.h"
 #include "ns3/lora-tag.h"
 
+#include "ns3/lora-device-address.h"
+
 namespace ns3 {
 namespace lorawan {
 
@@ -56,7 +58,91 @@ public:
    * \return The next transmission time.
    */
   Time GetWaitingTime (double frequency);
+  
+  //////////////////////////////
+  // LoRaWAN Class B related //
+  ////////////////////////////
+    
+  /**
+   * \brief Enable this Gateway for sending donwlinks via ping slots
+   */
+  void EnableClassBTransmission (void);
+  
+  /**
+   * \brief Disable the Gateway from sending downlinks via ping slots
+   */
+  void DisableClassBTransmission (void);
+  
+  /**
+   * \brief Whether the gateway is enabled to send downlinks via ping slots
+   * 
+   * \return true if the gateway is enabled to send downlinks via ping slots
+   */
+  bool IsClassBTransmissionEnabled (void);
+  
+  /**
+   * \brief Enable this Gateway for beacon transmission
+   */
+  void EnableBeaconTransmission (void);
+  
+  /**
+   * \brief Disable this Gateway from beacon transmission
+   */
+  void DisableBeaconTransmission (void);
+  
+  /**
+   * \brief Whether the gateway is enabled for beacon transmission
+   * 
+   * \return true if the gateway is enabled to transmit beacons 
+   */
+  bool IsBeaconTransmissionEnabled (void);
+  
+  //////////////////////////////////////////////////////////////
+  // For managing multicast groups to be served by a gateway //
+  ////////////////////////////////////////////////////////////
+  
+  /**
+   * Add a multicast address to be served by a gateway
+   * 
+   * \param mcAddress the multicast address to be served by this gateway
+   */
+  void AddMulticastGroup (LoraDeviceAddress mcAddress);
+  
+  /**
+   * Get the list of multicast address this gateway is serving
+   * 
+   * \return a list of LoraDeviceAddress that this gateway serves
+   */
+  std::list<LoraDeviceAddress> GetMulticastGroups (void);
+  
+  /**
+   * Check if a multicast address is in the group of multicast address that this 
+   * gateway serves
+   * 
+   * \param mcAddress the address to check whether it is in the list of multicast
+   * address that this gateway is serving
+   * \return true if the multicast address is in the list or false otherwise. 
+   */
+  bool CheckMulticastGroup (LoraDeviceAddress mcAddress);
+  
 private:
+  /**
+   * Whether this gateway can do beacon transmission
+   */
+  bool m_beaconTransmission;
+  
+  /**
+   * Whether this gateway can send class B downlinks via pingslots
+   */
+  bool m_classBTransmission;
+  
+  /**
+   * Multicast address for which the gateway is responsible for transmitting
+   * 
+   * To be used by the NetworkStatus in order to select suitable gateway 
+   */
+  std::list<LoraDeviceAddress> m_mcAddressList;
+  
 protected:
 };
 

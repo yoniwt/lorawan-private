@@ -380,5 +380,219 @@ LoraMacHelper::SetSpreadingFactorsUp (NodeContainer endDevices, NodeContainer ga
 
 } //  end function
 
+std::vector<LoraDeviceAddress>
+LoraMacHelper::CreateNMulticastGroup (NodeContainer endDevices, NodeContainer gateways, uint32_t numberOfDevicesPerGroups, bool enableCoordinatedRelaying)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  
+  // The number of multicast groups
+  // uint32_t numberOfGroups = ceil ((double)endDevices.GetN () / numberOfDevicesPerGroups); 
+  NS_LOG_DEBUG ("Number of multicast end devices = " << endDevices.GetN ()); 
+  NS_LOG_DEBUG ("Number of end devices per multicast group : " << numberOfDevicesPerGroups);
+  
+  std::vector<LoraDeviceAddress> multicastAddresses;
+  
+  for (NodeContainer::Iterator i = endDevices.Begin (); i != endDevices.End (); )
+    {
+      NodeContainer multicastGroup; 
+      for (uint32_t j = 0; i != endDevices.End () && j < numberOfDevicesPerGroups; ++i, ++j)
+      {
+        NS_LOG_DEBUG ("J = " << j);
+        multicastGroup.Add ((*i));
+      }
+      
+      LoraDeviceAddress multicastAddress = CreateMulticastGroup (multicastGroup, gateways, enableCoordinatedRelaying);
+      multicastAddresses.push_back (multicastAddress);
+    }
+  
+  return multicastAddresses;
+
+}
+
+std::vector<LoraDeviceAddress>
+LoraMacHelper::CreateNMulticastGroup (NodeContainer endDevices, NodeContainer gateways, uint32_t numberOfDevicesPerGroups, uint8_t dr, uint8_t pingSlotPeriodicity, bool enableCoordinatedRelaying, double channel)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  
+  // Number of multicast groups
+  // uint32_t numberOfGroups = ceil ((double)endDevices.GetN () / numberOfDevicesPerGroups); 
+  NS_LOG_DEBUG ("Number of multicast end devices : " << endDevices.GetN ());
+  NS_LOG_DEBUG ("Number of end devices per multicast group : " << numberOfDevicesPerGroups);
+  
+  std::vector<LoraDeviceAddress> multicastAddresses;
+  
+  for (NodeContainer::Iterator i = endDevices.Begin (); i != endDevices.End (); )
+    {
+      NodeContainer multicastGroup; 
+      for (uint32_t j = 0; i != endDevices.End () && j < numberOfDevicesPerGroups; ++i, ++j)
+      {
+        multicastGroup.Add ((*i));
+      }
+      
+      LoraDeviceAddress multicastAddress = CreateMulticastGroup (multicastGroup, gateways, dr, pingSlotPeriodicity, enableCoordinatedRelaying, channel);
+      multicastAddresses.push_back (multicastAddress);
+    }
+  
+  return multicastAddresses;
+}
+
+
+LoraDeviceAddress
+LoraMacHelper::CreateMulticastGroup (NodeContainer endDevices, NodeContainer gateways, bool enableCoordinatedRelaying)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  
+  LoraDeviceAddress mcDevAddr = m_addrGen->NextAddress ();
+  
+  uint32_t mcGroupSize = endDevices.GetN ();
+  
+  for (NodeContainer::Iterator j = endDevices.Begin (); j != endDevices.End (); ++j)
+    {
+      Ptr<Node> object = (*j);
+      
+      //Add each node to same multicast group mcDevAddr
+      AddToMulticastGroup (object, mcDevAddr, enableCoordinatedRelaying, mcGroupSize);
+    }
+  
+  for (NodeContainer::Iterator i = gateways.Begin (); i != gateways.End (); ++i)
+    {
+      //Assumes gateway mac is on the first device
+      Ptr<GatewayLoraMac> gwLoraMac = (*i)->GetDevice (0)->GetObject<LoraNetDevice> ()->
+                                         GetMac ()->GetObject<GatewayLoraMac> ();
+      //Add the multicast address to gateways list of multicat addresses
+      gwLoraMac->AddMulticastGroup (mcDevAddr);
+    }
+  
+  return mcDevAddr;
+}
+
+LoraDeviceAddress
+LoraMacHelper::CreateMulticastGroup (NodeContainer endDevices, NodeContainer gateways, uint8_t dr, uint8_t pingSlotPeriodicity, bool enableCoordinatedRelaying, double channel)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  
+  LoraDeviceAddress mcDevAddr = m_addrGen->NextAddress ();
+ 
+  uint32_t mcGroupSize = endDevices.GetN ();
+  
+  for (NodeContainer::Iterator j = endDevices.Begin (); j != endDevices.End (); ++j)
+    {
+      Ptr<Node> object = (*j);
+      
+      //Add each node to same multicast group mcDevAddr
+      AddToMulticastGroup (object, mcDevAddr, dr, pingSlotPeriodicity, enableCoordinatedRelaying, mcGroupSize, channel);
+    }
+  
+  for (NodeContainer::Iterator i = gateways.Begin (); i != gateways.End (); ++i)
+    {
+      //Assumes gateway mac is on the first device
+      Ptr<GatewayLoraMac> gwLoraMac = (*i)->GetDevice (0)->GetObject<LoraNetDevice> ()->
+                                         GetMac ()->GetObject<GatewayLoraMac> ();
+      //Add the multicast address to gateways list of multicat addresses
+      gwLoraMac->AddMulticastGroup (mcDevAddr);
+    }
+  
+  return mcDevAddr;
+}
+
+void
+LoraMacHelper::AddToMulticastGroup (Ptr<Node> endNode, LoraDeviceAddress mcDevAddr, bool enableCoordinatedRelaying, uint32_t numberOfEndDevicesinMcGroup)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  
+  Ptr<NetDevice> netDevice = endNode->GetDevice (0);
+  
+  Ptr<LoraNetDevice> loraNetDevice = netDevice->GetObject<LoraNetDevice> ();
+  NS_ASSERT (loraNetDevice != 0);
+      
+  Ptr<EndDeviceLoraMac> mac = loraNetDevice->GetMac ()->GetObject<EndDeviceLoraMac> ();
+  NS_ASSERT (mac != 0);
+  
+  //Setting the multicast address for the end device
+  mac->SetMulticastDeviceAddress (mcDevAddr);
+  
+  //Enabling it for multicast reception
+  mac->EnableMulticast ();
+  
+  if (enableCoordinatedRelaying)
+    {
+      
+      NS_ASSERT_MSG (numberOfEndDevicesinMcGroup > 1, "You can not enable coordinated relaying with less than 2 end devices in a group!");
+      
+      mac->EnableCoordinatedRelaying (numberOfEndDevicesinMcGroup);
+    }
+}
+
+void
+LoraMacHelper::AddToMulticastGroup (Ptr<Node> endNode, LoraDeviceAddress mcDevAddr, uint8_t dr, uint8_t pingSlotPeriodicity, bool enableCoordinatedRelaying, uint32_t numberOfEndDevicesinMcGroup, double channel)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  
+  Ptr<NetDevice> netDevice = endNode->GetDevice (0);
+  
+  Ptr<LoraNetDevice> loraNetDevice = netDevice->GetObject<LoraNetDevice> ();
+  NS_ASSERT (loraNetDevice != 0);
+      
+  Ptr<EndDeviceLoraMac> mac = loraNetDevice->GetMac ()->GetObject<EndDeviceLoraMac> ();
+  NS_ASSERT (mac != 0);
+  
+  //Setting the multicast address for the end device
+  mac->SetMulticastDeviceAddress (mcDevAddr);
+  
+  //Enabling it for multicast reception
+  mac->EnableMulticast ();
+  
+  //Override the class B parameters with the multicast
+  mac->SetPingSlotReceiveWindowDataRate (dr);
+  mac->SetPingSlotPeriodicity (pingSlotPeriodicity);
+  mac->SetPingSlotReceiveWindowFrequency (channel);
+  
+  if (enableCoordinatedRelaying)
+    {
+      
+      NS_ASSERT_MSG (numberOfEndDevicesinMcGroup > 1, "You can not enable coordinated relaying with less than 2 end devices in a group!");
+      
+      mac->EnableCoordinatedRelaying (numberOfEndDevicesinMcGroup);
+    }  
+}
+
+void
+LoraMacHelper::EnableBeaconTransmission (NodeContainer gateways)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  
+  for (NodeContainer::Iterator j = gateways.Begin (); j != gateways.End (); j++)
+    {
+      Ptr<Node> gateway = (*j);
+      
+      // Get the gateway's LoRa MAC layer (assumes gateway's MAC is configured as first device)
+      Ptr<GatewayLoraMac> gwMac = gateway->GetDevice (0)->GetObject<LoraNetDevice> ()->
+         GetMac ()->GetObject<GatewayLoraMac> ();
+      NS_ASSERT (gwMac != 0);
+      
+      //Enabling Beaconing
+      gwMac->EnableBeaconTransmission ();
+    }
+}
+
+void
+LoraMacHelper::EnableClassBDownlinkTransmission (NodeContainer gateways)
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  
+  for (NodeContainer::Iterator j = gateways.Begin (); j != gateways.End (); j++)
+    {
+      Ptr<Node> gateway = (*j);
+      
+      // Get the gateway's LoRa MAC layer (assumes gateway's MAC is configured as first device)
+      Ptr<GatewayLoraMac> gwMac = gateway->GetDevice (0)->GetObject<LoraNetDevice> ()->
+         GetMac ()->GetObject<GatewayLoraMac> ();
+      NS_ASSERT (gwMac != 0);
+      
+      //Enabling Beaconing
+      gwMac->EnableClassBTransmission ();
+    }
+}
+
 }
 } //end class
