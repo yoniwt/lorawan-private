@@ -136,7 +136,7 @@ public:
    * 
    * \return the list of multicast group's LoraDeviceAddress created
    */
-  std::vector<LoraDeviceAddress> CreateNMulticastGroup (NodeContainer endDevices,  NodeContainer gateways, uint32_t numberOfDevicesPerGroups, bool enableCoordinatedRelaying = false);
+  std::vector<LoraDeviceAddress> CreateNMulticastGroup (NodeContainer endDevices,  NodeContainer gateways, uint32_t numberOfDevicesPerGroups, uint8_t enableCoordinatedRelaying = 0);
   
   /**
    * Create a multicast group with the end-devices that are passed as a container
@@ -159,7 +159,7 @@ public:
    * 
    * \returnthe list of multicast group's LoraDeviceAddress created
    */
-  std::vector<LoraDeviceAddress> CreateNMulticastGroup (NodeContainer endDevices,  NodeContainer gateways, uint32_t numberOfDevicesPerGroups, uint8_t dr, uint8_t pingSlotPeriodicity, bool enableCoordinatedRelaying = false, double channel=869.525);  
+  std::vector<LoraDeviceAddress> CreateNMulticastGroup (NodeContainer endDevices,  NodeContainer gateways, uint32_t numberOfDevicesPerGroups, uint8_t dr, uint8_t pingSlotPeriodicity, uint8_t enableCoordinatedRelaying = 0, double channel=869.525);  
   
   
   /**
@@ -172,7 +172,7 @@ public:
    * 
    * \return LoraDeviceAddress the multicast devAddr of the created group
    */
-  LoraDeviceAddress CreateMulticastGroup (NodeContainer endDevices,  NodeContainer gateways, bool enableCoordinatedRelaying = false);
+  LoraDeviceAddress CreateMulticastGroup (NodeContainer endDevices,  NodeContainer gateways, uint8_t enableCoordinatedRelaying = 0);
   
     /**
    * Create a multicast group with the end-devices that are passed as a container
@@ -187,7 +187,7 @@ public:
    *
    * \return LoraDeviceAddress the multicast devAddr of the created group
    */
-  LoraDeviceAddress CreateMulticastGroup (NodeContainer endDevices,  NodeContainer gateways, uint8_t dr, uint8_t pingSlotPeriodicity, bool enableCoordinatedRelaying = false, double channel=869.525);
+  LoraDeviceAddress CreateMulticastGroup (NodeContainer endDevices,  NodeContainer gateways, uint8_t dr, uint8_t pingSlotPeriodicity, uint8_t enableCoordinatedRelaying = 0, double channel=869.525);
   
   /**
    * Add an end-device to a multicast group
@@ -199,7 +199,7 @@ public:
    * \param numberOfEndDevicesinMcGroup number of devices in a multicast group for enabling coordinated relaying ( Warning: Not Part of LoRaWAN Standard), default = 0
    * it must be greater than 1 for the coordinated relay to function   
    */
-  void AddToMulticastGroup (Ptr<Node> endNode, LoraDeviceAddress mcDevAddr, bool enableCoordinatedRelaying = false, uint32_t numberOfEndDevicesinMcGroup = 0);
+  void AddToMulticastGroup (Ptr<Node> endNode, LoraDeviceAddress mcDevAddr, uint8_t enableCoordinatedRelaying = false, uint32_t numberOfEndDevicesinMcGroup = 0);
   
   /**
    * Add an end-device to a multicast group
@@ -218,7 +218,7 @@ public:
    * \param channel the channel frequency the group is using, default is 869.525 MHz
    * 
    */
-  void AddToMulticastGroup (Ptr<Node> endNode, LoraDeviceAddress mcDevAddr, uint8_t dr, uint8_t pingSlotPeriodicity, bool enableCoordinatedRelaying = false, uint32_t numberOfEndDevicesinMcGroup = 0, double channel = 869.525);
+  void AddToMulticastGroup (Ptr<Node> endNode, LoraDeviceAddress mcDevAddr, uint8_t dr, uint8_t pingSlotPeriodicity, uint8_t enableCoordinatedRelaying = 0, uint32_t numberOfEndDevicesinMcGroup = 0, double channel = 869.525);
   
   /**
    * Enabling gateways that transmit beacon

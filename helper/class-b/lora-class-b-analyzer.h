@@ -28,6 +28,7 @@
 #include "ns3/lora-device-address.h"
 #include "ns3/node-container.h"
 #include "ns3/end-device-class-b-app.h"
+#include "src/lorawan/model/network-scheduler.h"
 #include <map>
 #include <string>
 
@@ -134,6 +135,17 @@ public:
    */
   void CurrentBeaconMissedRunLength (LoraDeviceAddress mcAddress, LoraDeviceAddress ucAddress, uint8_t currentBeaconMissedRunLength);
   
+  /**
+   * Number of overheard packets 
+   */
+  void NumberOfOverhearedPackets (LoraDeviceAddress mcAddress, LoraDeviceAddress ucAddress, uint32_t numberOfOverheardPacket);
+  
+  /**
+   * Number of failed ping downlinks
+   */
+  void NumberOfFailedPings (uint32_t oldValue, uint32_t newValue);
+  
+  
   ///////////////////////////
   // EndDeviceApplication //
   /////////////////////////
@@ -173,15 +185,17 @@ public:
    * Stream beacon related information from the NetworkServer
    *
    * \param output stream object to log to after finalizing
+   * \param verbose list performance for the network server if true, only put summary if false
    */
-  void FinalizeNsBeaconRelatedInformation (std::ostream& output);
+  void FinalizeNsBeaconRelatedInformation (std::ostream& output, bool verbose);
   
   /**
    * Stream downlink related information from the NetworkServer
    *
    * \param output stream object to log to after finalizing
+   * \param verbose list performance for the network server if true, only put summary if false
    */
-  void FinalizeNsDownlinkRelatedInformation (std::ostream& output);
+  void FinalizeNsDownlinkRelatedInformation (std::ostream& output, bool verbose);
    
   
   /**
@@ -208,8 +222,10 @@ public:
    * 
    * \param appStopTime is the time where the application stop
    * \param simulationSetup information about the simulation setup of append before the output
+   * \param nsVerbose enable verbose logging for the network server
+   * \param edVerbose enable verbose logging for the end device
    */
-  void Analayze (Time appStopTime, std::ostringstream& simulationSetup);
+  void Analayze (Time appStopTime, std::ostringstream& simulationSetup, bool nsVerbose, bool edVerbose);
   
   
 private:
@@ -282,6 +298,7 @@ private:
     uint32_t minimumNumberOfContinuousBeaconsSkippedByGws = 0;
     uint32_t lastBeaconingGateways = 0;
     uint32_t maxBeaconingGateways = 0;
+    Ptr<NetworkScheduler> networkScheduler = NULL; ///< To extract the pingDownlinkPacketSize later, If 0 the packet size if randomely selected, and if it is above the size supported by the DR used upto 255 the maximum possible size will be selected 
   };
   
   struct NSBeaconRelatedPerformance m_nSBeaconRelatedPerformance;    
@@ -382,6 +399,8 @@ private:
     double prr = 0; ///<Packet reception ratio;
     
     Ptr<Packet> latestPacketReceived = 0; ///< the latest packet that is received; this can be used to check lost packets from sent packets. 
+    
+    uint32_t numberOfOverhearedPackets = 0; ///< Number of packets an end-device has overheared
   };
   
   struct McEdDownlinkRelatedPerformance
@@ -428,6 +447,8 @@ private:
   };
     
   std::map<LoraDeviceAddress, struct McEdDownlinkRelatedPerformance> m_mcEdDownlinkRelatedPerformance; ///< Multicast Related Network Server Downlink Performance  
+  
+  uint32_t m_failedPings; // Total number of failed ping downlinks
   
 };
 

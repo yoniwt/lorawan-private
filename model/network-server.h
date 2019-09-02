@@ -102,6 +102,10 @@ public:
   
   Ptr<NetworkScheduler> GetNetworkScheduler (void); 
 
+  ///////////////////////////////////////////////////////
+  // Functions to modify network-scheduler attributes //
+  /////////////////////////////////////////////////////
+  
   /**
    * To Enable the server for the class B downlink transmission
    * 
@@ -123,6 +127,25 @@ public:
    * \param enable if true it enables the sequenced packet generation
    */
   void EnableSequencedPacketGeneration (bool enable);
+  
+  /**
+   * Set the packet size for the ping downlink
+   * 
+   * \param [in] downlinkPacketSize downlink packet size to be used for downlink.
+   * If it is 0 randomSize will be selected and if it is above the maximum packet
+   * size the data-rate support to 255 the corresponding maximum packet size will
+   * be used
+   */
+  void SetPingDownlinkPacketSize (uint8_t pingDownlinkPacketSize);
+  
+  /**
+   * Get the packet size set for the ping downlinks
+   * 
+   * \return downlink packet size used for the ping downlink. If it is 0 
+   * randomSize will be selected and if it is above the maximum packet size the 
+   * data-rate support to 255 the corresponding maximum packet size will be used
+   */
+  uint8_t GetPingDownlinkPacketSize (void) const;
   
 protected:
   Ptr<NetworkStatus> m_status;

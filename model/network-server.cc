@@ -215,5 +215,16 @@ NetworkServer::EnableSequencedPacketGeneration (bool enable)
   m_scheduler->EnableSequencedPacketGeneration (enable);
 }
 
+void
+NetworkServer::SetPingDownlinkPacketSize (uint8_t pingDownlinkPacketSize)
+{
+  m_scheduler->SetPingDownlinkPacketSize (pingDownlinkPacketSize);
+}
+
+uint8_t
+NetworkServer::GetPingDownlinkPacketSize () const
+{
+  return m_scheduler->GetPingDownlinkPacketSize ();
+}
 }
 }

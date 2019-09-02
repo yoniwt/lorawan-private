@@ -97,6 +97,26 @@ public:
    */
   void EnableSequencedPacketGeneration (bool enable);
   
+    
+  /**
+   * Set the packet size for the ping downlink
+   * 
+   * \param [in] downlinkPacketSize downlink packet size to be used for downlink.
+   * If it is 0 randomSize will be selected and if it is above the maximum packet
+   * size the data-rate support to 255 the corresponding maximum packet size will
+   * be used
+   */
+  void SetPingDownlinkPacketSize (uint8_t pingDownlinkPacketSize);
+  
+  /**
+   * Get the packet size set for the ping downlinks
+   * 
+   * \return downlink packet size used for the ping downlink. If it is 0 
+   * randomSize will be selected and if it is above the maximum packet size the 
+   * data-rate support to 255 the corresponding maximum packet size will be used
+   */
+  uint8_t GetPingDownlinkPacketSize (void) const;
+  
   
   /****************************
    * TracedCallback Signatures
@@ -307,6 +327,22 @@ private:
    * This is true when the Sequenced Packet Generation is enabled
    */
   bool m_enableSequencedPacketGeneration;
+  
+  /**
+   * Downlink packet size in bytes
+   * 
+   * 0 indicates random packet generation from 1 byte to the maximum byte for the 
+   * corresponding   
+   * Any number greater than the maximum packet size for the corresponding data-rate
+   * to 255 indicates the maximum corresponding packet size for the data-rate
+   */
+  uint8_t m_pingDownlinkPacketSize;
+  
+  /**
+   * Random number generator for packet size
+   * 
+   */
+  Ptr<UniformRandomVariable> m_randomPacketSize;
   
   /**
    * Other TraceSources

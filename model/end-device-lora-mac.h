@@ -822,6 +822,15 @@ public:
    */
   typedef void (*CustomTracedValue) (LoraDeviceAddress mcAddress, LoraDeviceAddress ucAddress, uint32_t newValue);
   
+  /**
+   * Custom traced value that will include the unicast and the multicast address along
+   * with the new traced value
+   * 
+   * \param mcAddress the multicast address of this device, 0 if it is a unicast device
+   * \param ucAddress the unicast address of this device
+   * \param numberOfOverheardPacket number of overheard packet
+   */ 
+  typedef void (*NumberOfOverhearedPackets) (LoraDeviceAddress mcAddress, LoraDeviceAddress ucAddress, uint32_t numberOfOverheardPacket);
   
   //////////////////////////////////////////////////////////////
   // MAC Layer modification to enabling cooprative relaying 
@@ -835,7 +844,12 @@ public:
   //
   ////////////////////////////////////////////////////////////
   
-  void EnableCoordinatedRelaying (uint32_t numberOfEndDeviceInMcGroup); 
+  void EnableCoordinatedRelaying (uint32_t numberOfEndDeviceInMcGroup, uint8_t relayingAlgorithm); 
+  
+  /**
+   * To get the power by which to relay based on the algorithm selected
+   */
+  double GetRelayingPower (void);
   
   
 private:
@@ -876,6 +890,7 @@ private:
   struct PingSlotInfo
   {
     std::vector<EventId> pendingPingSlotEvents; ///< EventId ping slot events that are scheduled per beacon window
+    EventId closeOpenedPingSlot; ///< EventId for closing of a ping slot window if a ping downlink is not received
     uint8_t pingSlotPeriodicity = 0; ///< PingSlotPeriodicity, default is 0
     uint8_t pingNb = 128; ///< PingNb (number of pings in beacon window), default is 128
     uint pingPeriod = 32; ///< pingPeriod (in number of slots), default is 32
@@ -1245,24 +1260,40 @@ TracedValue<uint8_t> m_requiredTx;
    */
   TracedValue<uint32_t> m_totalBytesReceived;
   
+  /**
+   * Total number of overheared packets
+   */
+  TracedCallback<LoraDeviceAddress, LoraDeviceAddress, uint32_t>  m_numberOfOverhearedPackets;
+  
+  /**
+   * Variables that count the number of overheard packets
+   */
+  uint32_t m_overheardPacketCount;
+    
   ////////////////////////////////
   // Related to multicasting   //
   //////////////////////////////
   
   bool m_enableMulticast;
   
-  //////////////////////////////
+  //////////////////////////////////////////
   // Related to coordinated-relaying     //
-  ////////////////////////////
+  ////////////////////////////////////////
   bool m_relayActivated; 
   
   bool m_relayPending;
   
-  double m_maxBandTxPower; ///< Max transmission power allowed in the band
+  struct RelayPower
+  {
+    int numberOfEndDeviceInMcGroup = 1;  ///< numberOfMulticast members in a group
+    double m_maxTxPower = 14; ///< The maximum power for transmitter with PA0 is 14db without PA_BOOST. [Ref: SX1272 and SX1276 manual]
+    double m_minTxPower = -1; ///< The minimum power for transmitter with PA0 is -1db without PA_BOOSt. [Ref: SX1272 and SX1276 manual] 
+    uint8_t algorithm = 1; ///< The algorithm logic to be used for relaying
+    Ptr<UniformRandomVariable> decisionForRelayingRandomNumber = CreateObject<UniformRandomVariable> (); ///< Random variable for deciding whether to relay or not
+    Ptr<UniformRandomVariable> relayPowerRandomNumber =  CreateObject<UniformRandomVariable> (); ///< Random variable to decide the power to relay with
+  };
   
-  double m_marginTxPower; ///< Margin Tx power to be added to the m_maxBandTxPower before calculating m_relayPower
-  
-  double m_relayPower; ///< Actual power that is going to be used for relay transmission
+  struct RelayPower m_relayPower; ///< Informations needed for calculating relaying power
   
   uint8_t maxHop; ///< The maximum amount of time the packet hops
   

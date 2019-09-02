@@ -35,7 +35,7 @@
 using namespace ns3;
 using namespace lorawan;
 
-NS_LOG_COMPONENT_DEFINE ("ClassBLorawanNetworkExample");
+NS_LOG_COMPONENT_DEFINE ("ClassBLorawanNetworkExample2");
 
 // Network settings
 int nUcDevices = 0;//10;
@@ -72,10 +72,11 @@ int nBeaconGateways = 1; //For now only this one is used // all gateways placed 
 int nClassBGateways = 1; 
 
 double radius = 7500;
-double simulationTime = 86400;//1 day //2400;
+double simulationTime = 21600; //6 hours  //86400;//1 day //2400;
 
 // Channel model
 bool realisticChannelModel = false;//true;
+double nakagamiM = 0.5; // the N value of nakagami, if N=1 it will model raylagh fading
 
 int appPeriodSeconds = 100;//600; 
 
@@ -84,7 +85,8 @@ int delayToSwitchToClassB = 100; //Period of uplink after switching to class B
 int periodsToSimulate = 1;
 int transientPeriods = 0;
 
-
+// Enable one of the algorithm of multicast relaying; turnoff if it is zero
+int multicastRelaying = 0;
 
 // Output control
 bool print = true;
@@ -99,6 +101,9 @@ int main (int argc, char *argv[])
   cmd.AddValue ("realisticChannelModel",
                 "Include shadowing loss and building penetration loss",
                 realisticChannelModel);  
+  cmd.AddValue ("nakagamiM",
+                "The m value for Nakagami-m model to be used if realistic channel is used",
+                nakagamiM);
   cmd.AddValue ("nUcDevices",
                 "Number of unicast class B end devices to include in the simulation",
                 nUcDevices);
@@ -124,7 +129,7 @@ int main (int argc, char *argv[])
                 "The radius of the area to simulate",
                 radius);
   cmd.AddValue ("nBeaconGateways",
-                "The number of gateways that are placed both for Beacon transmission (for now also for class B downlink and Class A operation also",
+                "The number of gateways that are placed both for Beacon transmission (for now also for class B downlink and Class A operation also)",
                 nBeaconGateways);
   cmd.AddValue ("simulationTime",
                 "The time for which to simulate",
@@ -144,25 +149,29 @@ int main (int argc, char *argv[])
   cmd.AddValue ("filePostFix",
                 "A post fix to be appended at the end of the simulation, used if addInfoOnFileName is false",
                 filePostFix);    
+  cmd.AddValue ("multicastRelaying",
+                "Enable one of the algorithm of multicast relaying; turnoff if it is zero. (Warning: this is part of the modified protocol which does not exist in the LoRaWAN Specification)",
+                 multicastRelaying);
+  
   
   //Also add argument of class B paramters
   cmd.Parse (argc, argv);
 
   
   // Set up logging
-  //-LogComponentEnable ("ClassBLorawanNetworkExample", LOG_LEVEL_ALL);
-  // LogComponentEnable ("LoraChannel", LOG_LEVEL_INFO);
+  // LogComponentEnable ("ClassBLorawanNetworkExample2", (LogLevel)(LOG_PREFIX_TIME | LOG_LEVEL_ALL));
+  // LogComponentEnable ("LoraChannel", (LogLevel)(LOG_PREFIX_TIME | LOG_LEVEL_INFO));
   // LogComponentEnable ("LoraPhy", LOG_LEVEL_ALL);
-  //-LogComponentEnable ("EndDeviceLoraPhy", (LogLevel)(LOG_PREFIX_TIME | LOG_LEVEL_ALL));
+  // LogComponentEnable ("EndDeviceLoraPhy", (LogLevel)(LOG_PREFIX_TIME | LOG_LEVEL_ALL));
   // LogComponentEnable ("GatewayLoraPhy", LOG_LEVEL_ALL);
   // LogComponentEnable ("LoraInterferenceHelper", LOG_LEVEL_ALL);
   //-LogComponentEnable ("LoraMac", LOG_LEVEL_ALL);
-  //-LogComponentEnable ("EndDeviceLoraMac", (LogLevel)(LOG_PREFIX_TIME | LOG_LEVEL_ALL));
+  // LogComponentEnable ("EndDeviceLoraMac", (LogLevel)(LOG_PREFIX_TIME | LOG_LEVEL_ALL));
   //-LogComponentEnable ("GatewayLoraMac", (LogLevel)(LOG_PREFIX_TIME | LOG_LEVEL_ALL));
   // LogComponentEnable ("LogicalLoraChannelHelper", LOG_LEVEL_ALL);
   // LogComponentEnable ("LogicalLoraChannel", LOG_LEVEL_ALL);
-   //LogComponentEnable ("LoraHelper", LOG_LEVEL_ALL);
-  // LogComponentEnable ("LoraPhyHelper", LOG_LEVEL_ALL);
+  // LogComponentEnable ("LoraHelper", LOG_LEVEL_ALL);
+  // LogComponentEnable ("LoraPhyHelper", (LogLevel)(LOG_PREFIX_TIME | LOG_LEVEL_ALL));
   // LogComponentEnable ("LoraMacHelper", (LogLevel)(LOG_PREFIX_TIME | LOG_LEVEL_ALL));
   // LogComponentEnable ("PeriodicSenderHelper", LOG_LEVEL_ALL);
   // LogComponentEnable ("PeriodicSender", LOG_LEVEL_ALL);
@@ -178,11 +187,16 @@ int main (int argc, char *argv[])
   // LogComponentEnable ("SimpleGatewayLoraPhy", (LogLevel)(LOG_PREFIX_TIME | LOG_LEVEL_ALL));
   // LogComponentEnable ("SimpleEndDeviceLoraPhy", (LogLevel)(LOG_PREFIX_TIME | LOG_LEVEL_ALL));
   // LogComponentEnable ("LoraClassBAnalyzer", (LogLevel)(LOG_PREFIX_TIME | LOG_LEVEL_ALL));
+   
+  // LogComponentEnable ("CorrelatedShadowingPropagationLossModel", (LogLevel)(LOG_PREFIX_TIME | LOG_LEVEL_ALL));
+  // LogComponentEnable ("BuildingPenetrationLoss", (LogLevel)(LOG_PREFIX_TIME | LOG_LEVEL_ALL));
   
   /*********************
    * Check user inputs *
    *********************/
   NS_ASSERT (dr <= 5 && dr >= 0);
+  
+  NS_ASSERT (multicastRelaying < 6);
   
   /***********
    *  Setup  *
@@ -193,10 +207,27 @@ int main (int argc, char *argv[])
 
   // Mobility
   MobilityHelper mobility;
-  mobility.SetPositionAllocator ("ns3::UniformDiscPositionAllocator",
-                                 "rho", DoubleValue (radius),
+   std::string stringRadius = "ns3::UniformRandomVariable[Min=10|Max="+std::to_string(radius)+"]";
+//  std::string stringRadius = "ns3::UniformRandomVariable[Min="+std::to_string(radius-(radius*0.75))+"|Max="+std::to_string(radius)+"]";  
+  
+//  mobility.SetPositionAllocator ("ns3::UniformDiscPositionAllocator",
+//                                 "rho", DoubleValue (radius),
+//                                 "X", DoubleValue (0.0),
+//                                 "Y", DoubleValue (0.0));  
+  
+  mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
+                                 "Rho", StringValue (stringRadius),  //Theta is 360 degree by default
                                  "X", DoubleValue (0.0),
                                  "Y", DoubleValue (0.0));
+  
+//  mobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
+//                                 "Theta", StringValue ("ns3::UniformRandomVariable[Min=0|Max=0.7854]"),
+//                                 "Rho", StringValue (stringRadius),
+//                                 "X", DoubleValue (0.0),
+//                                 "Y", DoubleValue (0.0));
+  
+  
+
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
 
   /************************
@@ -210,16 +241,34 @@ int main (int argc, char *argv[])
   
   if (realisticChannelModel)
     {
-      // Create the correlated shadowing component
-      Ptr<CorrelatedShadowingPropagationLossModel> shadowing = CreateObject<CorrelatedShadowingPropagationLossModel> ();
+      //NakagamiPropagationLossModel
+      Ptr<NakagamiPropagationLossModel> nakagamiLoss = CreateObject <NakagamiPropagationLossModel> ();
+      nakagamiLoss->SetAttribute ("Distance1", DoubleValue (radius/2));
+      nakagamiLoss->SetAttribute ("m0", DoubleValue(nakagamiM));
+      nakagamiLoss->SetAttribute ("Distance2", DoubleValue (radius));
+      nakagamiLoss->SetAttribute ("m1", DoubleValue(nakagamiM));
+      nakagamiLoss->SetAttribute ("m2", DoubleValue(nakagamiM));
+        
+      loss->SetNext (nakagamiLoss);
+      
+//      // Create the correlated shadowing component
+//      Ptr<CorrelatedShadowingPropagationLossModel> shadowing = CreateObject<CorrelatedShadowingPropagationLossModel> ();
+//
+//      // Aggregate shadowing to the logdistance loss
+//      loss->SetNext (shadowing);
 
-      // Aggregate shadowing to the logdistance loss
-      loss->SetNext (shadowing);
-
-      // Add the effect to the channel propagation loss
-      Ptr<BuildingPenetrationLoss> buildingLoss = CreateObject<BuildingPenetrationLoss> ();
-
-      shadowing->SetNext (buildingLoss);
+//      // Add the effect to the channel propagation loss
+//      Ptr<BuildingPenetrationLoss> buildingLoss = CreateObject<BuildingPenetrationLoss> ();
+//
+//      shadowing->SetNext (buildingLoss);
+      
+//      // Random propagation loss
+//      Ptr<RandomPropagationLossModel> randomLoss = CreateObject <RandomPropagationLossModel> ();
+//      randomLoss->SetAttribute ("Variable", StringValue ("ns3::NormalRandomVariable[Mean=0|Variance=45.0]")); //|Bound=600.0
+       
+//      shadowing->SetNext (randomLoss);
+//      buildingLoss->SetNext (randomLoss);
+       
     }
 
   Ptr<PropagationDelayModel> delay = CreateObject<ConstantSpeedPropagationDelayModel> ();
@@ -382,10 +431,14 @@ int main (int argc, char *argv[])
 //  macHelper.CreateMulticastGroup (mcEndDevices2, classBGateways, 3, 0);
   
   //macHelper.CreateNMulticastGroup (mcTotalEndDevices, classBGateways, nMcDevicesPerGroup);    
-  if (nMcDevices > 0)
+  if (nMcDevices > 1)
     {
-      macHelper.CreateNMulticastGroup (mcTotalEndDevices, classBGateways, nMcDevicesPerGroup, dr, periodicity);      
-    } 
+      macHelper.CreateNMulticastGroup (mcTotalEndDevices, classBGateways, nMcDevicesPerGroup, dr, periodicity, multicastRelaying);      
+    }
+  else if (nMcDevices > 0)
+    {
+      macHelper.CreateNMulticastGroup (mcTotalEndDevices, classBGateways, nMcDevicesPerGroup, dr, periodicity);
+    }
   
   /**********************
    *  Handle buildings  *
@@ -560,7 +613,8 @@ int main (int argc, char *argv[])
   // throughput-<groupIndex>-<dr>-<ping-slot periodicty>-<numberofnodes>-<filePostFix>.csv,
   // maxRunLength-<groupIndex>-<dr>-<ping-slot periodicty>-<numberofnodes>-<filePostFix>.csv,
   // avgRunLength-<groupIndex>-<dr>-<ping-slot periodicty>-<numberofnodes>-<filePostFix>.csv
-  std::string verboseLocation = "/home/yoni/matlab/LorawanClassB-refining/"; //"home/yoni/matlab/LorawanClassB/";
+  std::string verboseLocation = "/home/yoni/matlab/MscThesis/Nakagami"+std::to_string (nakagamiM).substr (0,3)+"/LorawanClassB"+std::to_string (multicastRelaying)+"/"; //"home/yoni/matlab/LorawanClassB/";
+  //_mkdir(verboseLocation.c_str());
   LoraClassBAnalyzer classBAnalyzer(outputFileNameNs, outputFileNameEd, verboseLocation, append, endDevices, gateways, networkServer); 
   
   /**********************
@@ -586,7 +640,7 @@ int main (int argc, char *argv[])
   ///////////////////////////
   // Print results to file //
   ///////////////////////////
-  //NS_LOG_INFO ("Computing performance metrics...");
+  NS_LOG_INFO ("Computing performance metrics...");
   //helper.PrintPerformance (transientPeriods * appPeriod, appStopTime);
   std::ostringstream simulationSetup;
   simulationSetup << "Number of unicast devices = " << nUcDevices << std::endl
@@ -598,7 +652,7 @@ int main (int argc, char *argv[])
                   << "SimulationTime (Seconds) = " << simulationTime << std::endl
                   << "Number of beaconing gateways = " << nBeaconGateways << std::endl;
   
-  classBAnalyzer.Analayze (appStopTime, simulationSetup, false, false);
-
+  classBAnalyzer.Analayze (appStopTime, simulationSetup, false, true);
+  std::cout << verboseLocation << std::endl;
   return 0;
 }

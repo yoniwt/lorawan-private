@@ -2,6 +2,7 @@
 #include "src/core/model/log-macros-enabled.h"
 #include "ns3/aes.h"
 #include "ns3/hop-count-tag.h"
+#include "src/core/model/assert.h"
 
 namespace ns3 {
 namespace lorawan {
@@ -50,6 +51,14 @@ NetworkScheduler::GetTypeId (void)
                      MakeTraceSourceAccessor 
                        (&NetworkScheduler::m_beaconStatusCallback),
                      "ns3::NetworkScheduler::BeaconStatusCallback")
+    .AddAttribute ("PingDownlinkPacketSize",
+                   "The packet size for the ping downlink. If 0, a random size"
+                    "will be used and if greater than what is supported by the" 
+                    "data rate to 255 the maximum data rate will be used ",
+                    UintegerValue(255),
+                    MakeIntegerAccessor(&NetworkScheduler::m_pingDownlinkPacketSize),
+                    MakeUintegerChecker<uint8_t>()                  
+                  )
     .SetGroupName ("lorawan");
   return tid;
 }
@@ -64,6 +73,7 @@ NetworkScheduler::NetworkScheduler () :
   m_beaconStatus (NetworkScheduler::BeaconStatus()),
   m_beaconRelatedConstants (NetworkScheduler::BeaconRelatedConstants())
 {
+  m_randomPacketSize = CreateObject<UniformRandomVariable> ();
 }
 
 NetworkScheduler::NetworkScheduler (Ptr<NetworkStatus> status,
@@ -79,6 +89,7 @@ NetworkScheduler::NetworkScheduler (Ptr<NetworkStatus> status,
   m_beaconStatus (NetworkScheduler::BeaconStatus()),
   m_beaconRelatedConstants (NetworkScheduler::BeaconRelatedConstants())    
 {
+  m_randomPacketSize = CreateObject<UniformRandomVariable> ();
 }
 
 NetworkScheduler::~NetworkScheduler ()
@@ -342,9 +353,35 @@ NetworkScheduler::ScheduleClassBDownlink (uint32_t bcnTime)
       
       if (m_downlinkPacket.find (address) == m_downlinkPacket.end ())
         {
+        
+          uint8_t sizeOfAppPayload; 
+          uint8_t maxAppPayloadForDataRate = m_maxAppPayloadForDataRate.at (dataRate);
+          
+          if (m_pingDownlinkPacketSize == 0)
+            {
+              // Generate a random packet size from 1 to the maximum size possible
+              sizeOfAppPayload = m_randomPacketSize->GetInteger (1, (uint32_t)maxAppPayloadForDataRate);
+            }
+          else if (m_pingDownlinkPacketSize <= 255 && m_pingDownlinkPacketSize > maxAppPayloadForDataRate)
+            {
+              //Set to maximum size
+              sizeOfAppPayload = m_maxAppPayloadForDataRate.at (dataRate);
+            }
+          else if (m_pingDownlinkPacketSize > 0 && m_pingDownlinkPacketSize < maxAppPayloadForDataRate)
+            {
+              //Use the packet size defined as the packet size
+              sizeOfAppPayload = m_pingDownlinkPacketSize;
+            }
+          else 
+            {
+              NS_ASSERT_MSG (false, "Invalid pingDownlinkPacketSize");
+            }
+          
+          NS_LOG_DEBUG ("Ping Downlink Packet Size to be used for multicast group address " << address << " is " << (int)sizeOfAppPayload);
+            
           enum DownlinkType downlinkType = m_enableSequencedPacketGeneration ? DownlinkType::SEQUENCED : DownlinkType::EMPTY;
           Ptr<DownlinkPacketGenerator> downlinkPacket = Create<DownlinkPacketGenerator> (downlinkType, 
-                                                                                         m_maxAppPayloadForDataRate.at (dataRate), 
+                                                                                         sizeOfAppPayload, 
                                                                                          0); //Start from sequence 0
           //No packet generator yet for the device address so add
           m_downlinkPacket.insert (std::pair<LoraDeviceAddress, Ptr<DownlinkPacketGenerator> > (address, downlinkPacket));
@@ -553,6 +590,22 @@ void
 NetworkScheduler::EnableSequencedPacketGeneration (bool enable)
 {
   m_enableSequencedPacketGeneration = enable;
+}
+
+void
+NetworkScheduler::SetPingDownlinkPacketSize (uint8_t pingDownlinkPacketSize)
+{
+  NS_LOG_FUNCTION (this << pingDownlinkPacketSize);
+  
+  m_pingDownlinkPacketSize = pingDownlinkPacketSize;
+}
+
+uint8_t
+NetworkScheduler::GetPingDownlinkPacketSize () const
+{
+  NS_LOG_FUNCTION (this);
+  
+  return m_pingDownlinkPacketSize;
 }
 
 }

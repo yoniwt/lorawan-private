@@ -147,7 +147,12 @@ EndDeviceLoraMac::GetTypeId (void)
                      "The number of downlink bytes received by the device",
                      MakeTraceSourceAccessor
                        (&EndDeviceLoraMac::m_totalBytesReceived),
-                     "ns3::TracedValueCallback::Uint32")  
+                     "ns3::TracedValueCallback::Uint32")
+    .AddTraceSource ("NumberOfOverhearedPackets",
+                     "The packet that are overheard in the ping slots",
+                     MakeTraceSourceAccessor
+                       (&EndDeviceLoraMac::m_numberOfOverhearedPackets),
+                     "ns3::EndDeviceLoraMac::NumberOfOverhearedPackets")  
     .AddConstructor<EndDeviceLoraMac> ();
   return tid;
 }
@@ -186,12 +191,10 @@ EndDeviceLoraMac::EndDeviceLoraMac ()
   m_currentConsecutiveBeaconsMissed (0),
   m_attemptToClassB(0),
   m_totalBytesReceived (0),
+  m_overheardPacketCount (0),
   m_enableMulticast (false),
   m_relayActivated (false),
   m_relayPending (false),
-  m_maxBandTxPower (27),
-  m_marginTxPower (0),
-  m_relayPower (14),
   maxHop (2)
 {
   NS_LOG_FUNCTION (this);
@@ -223,12 +226,15 @@ EndDeviceLoraMac::EndDeviceLoraMac ()
   
   //Initialize and void ping slot Events
   //used to cancel events when device Class is switched from Class B to A
-  m_pingSlotInfo.pendingPingSlotEvents.resize (128);
+  m_pingSlotInfo.pendingPingSlotEvents.resize (m_pingSlotInfo.pingNb);
   for (EventId& ping : m_pingSlotInfo.pendingPingSlotEvents)
   {
     ping = EventId ();
     ping.Cancel ();
   }
+  
+  //Initializing relay power structure 
+  m_relayPower = EndDeviceLoraMac::RelayPower ();
   
 }
 
@@ -498,6 +504,20 @@ EndDeviceLoraMac::Receive (Ptr<Packet const> packet)
         {
           NS_LOG_DEBUG ("Dropping packet! BcnPacket received in a wrong slot (Ping Slot)");
           //\TODO may be fire trace source here
+          
+          //Once the packet has failed free the MAC
+          if (m_macState == MAC_PING_SLOT_BEACON_GUARD)
+            {
+              //If beacon guard started before end of the packet then switch back 
+              //to the beacon reserved
+              NS_LOG_DEBUG ("Switching back to Beacon Guard!");
+              SetMacState (MAC_BEACON_GUARD);
+            }
+          else if (m_macState == MAC_PING_SLOT)
+            {
+              NS_LOG_DEBUG ("Switching to IDLE!");
+              SetMacState (MAC_IDLE);
+            }
         }
       else
         {
@@ -1827,12 +1847,15 @@ EndDeviceLoraMac::StartBeaconGuard (void)
           break;
         case MAC_RX1:
           SetMacState (MAC_RX_BEACON_GUARD);
+          NS_LOG_DEBUG ("Finsihing RX1 reception during the guard period!");
           break;
         case MAC_RX2:
           SetMacState (MAC_RX_BEACON_GUARD);
+          NS_LOG_DEBUG ("Finsihing RX2 reception during the guard period!");
           break;
         case MAC_PING_SLOT:
           SetMacState (MAC_PING_SLOT_BEACON_GUARD);
+          NS_LOG_DEBUG ("Finsihing ping-slot reception during the guard period!");
           break;
         default:
           NS_LOG_INFO ("Can not start the beacon guard; mac is in an improper state");
@@ -1861,7 +1884,8 @@ EndDeviceLoraMac::StartBeaconReserved (void)
 
   NS_LOG_FUNCTION_NOARGS ();
   
-  NS_ASSERT_MSG (m_macState == MAC_BEACON_GUARD, "Beacon guard should be right before the beacon reserved");
+  
+  NS_ASSERT_MSG (m_macState == MAC_BEACON_GUARD, "Macstate = " << m_macState <<"! Beacon guard should be right before the beacon reserved");
   
   //Open the beacon slot receive window to detect preamble for the beacon
   
@@ -2072,6 +2096,8 @@ EndDeviceLoraMac::SchedulePingSlots (void)
   // (BeaconReserved + (pingOffset+ slotIndex*pingPeriod)*slotLen)
   uint8_t slotIndex = 0;
  
+  NS_LOG_DEBUG ("Number of pings scheduled per beacon period " << m_pingSlotInfo.pendingPingSlotEvents.size ());
+  
   for (EventId& ping : m_pingSlotInfo.pendingPingSlotEvents)
    {
     //When switch back to class A is requested cancel all the non expired events 
@@ -2081,6 +2107,8 @@ EndDeviceLoraMac::SchedulePingSlots (void)
                                  &EndDeviceLoraMac::OpenPingSlotReceiveWindow,
                                  this,
                                  slotIndex);
+     NS_ASSERT_MSG (slotTime < m_beaconInfo.beaconWindow, "A slot should only be placed within a beaconWindow duration!");
+     NS_LOG_DEBUG ("Ping scheduled for index " << (int)slotIndex << " after " << slotTime.GetSeconds () << " seconds");
      slotIndex++;
    }
 }
@@ -2318,21 +2346,31 @@ EndDeviceLoraMac::OpenPingSlotReceiveWindow(uint8_t slotIndex)
       params.lowDataRateOptimizationEnabled = 0;
 
       // Wake up PHY layer and directly send the packet
+      
+      double relayPower = GetRelayingPower ();
+      
+      //Only transmit if relay power is greater than 0
+      if (relayPower >= 0)
+        {
+          NS_LOG_DEBUG ("Packet to relay: " << packetToRelay << "& UID :" << packetToRelay->GetUid ());
+          m_phy->Send (packetToRelay, params, m_classBReceiveWindowInfo.pingSlotReceiveWindowFrequency, GetRelayingPower());
+          
+          //\TODO For future you need to register packet transmission for duty cycle
+          // For now only one gateway is used. Therefore, if the gateway respects the duty cycle, the end-device will also respect.=
+          // There will be a problem for multiple gateway case
 
-      NS_LOG_DEBUG ("Packet to relay: " << packetToRelay << "& UID :" << packetToRelay->GetUid ());
-      m_phy->Send (packetToRelay, params, m_classBReceiveWindowInfo.pingSlotReceiveWindowFrequency, m_relayPower);
+          // Mac is now busy transmitting in the ping slot, 
+          // The Tx finished will put it back to IDLE
+          // Therefore only the purpose of the ping is changed the rest stays the same
+          SetMacState (MAC_PING_SLOT);
+          
+          return;
+        }
+      else
+        {
+          NS_LOG_DEBUG ("Packet not relayed!");
+        }
 
-
-      //\TODO For future you need to register packet transmission for duty cycle
-      // For now only one gateway is used. Therefore, if the gateway respects the duty cycle, the end-device will also respect.=
-      // There will be a problem for multiple gateway case
-
-      // Mac is now busy transmitting in the ping slot, 
-      // The Tx finished will put it back to IDLE
-      // Therefore only the purpose of the ping is changed the rest stays the same
-      SetMacState (MAC_PING_SLOT);
-
-      return;
     }
   
   SetMacState (MAC_PING_SLOT);
@@ -2353,7 +2391,7 @@ EndDeviceLoraMac::OpenPingSlotReceiveWindow(uint8_t slotIndex)
   double tSym = pow (2, GetSfFromDataRate (m_classBReceiveWindowInfo.pingSlotReceiveWindowDataRate)) / GetBandwidthFromDataRate (m_classBReceiveWindowInfo.pingSlotReceiveWindowDataRate);
     
   // Schedule return to sleep after current beacon slot receive window duration
-  m_closeSecondWindow = Simulator::Schedule (Seconds (m_classBReceiveWindowInfo.pingReceiveWindowDurationInSymbols *tSym),
+  m_pingSlotInfo.closeOpenedPingSlot = Simulator::Schedule (Seconds (m_classBReceiveWindowInfo.pingReceiveWindowDurationInSymbols *tSym),
                                              &EndDeviceLoraMac::ClosePingSlotRecieveWindow, this);
   
   //update slot index of the opened ping slot
@@ -2409,7 +2447,7 @@ EndDeviceLoraMac::ClosePingSlotRecieveWindow()
     }
   else
     {
-      NS_LOG_ERROR ("Invalid MAC State at the End of receiving ping!");
+      NS_ASSERT_MSG (false, "Invalid MAC State at the End of receiving ping!");
     }
 }
 
@@ -2504,13 +2542,21 @@ EndDeviceLoraMac::PingReceived(Ptr<Packet const> packet)
                   m_classBDownlinkCallback (EndDeviceLoraMac::MULTICAST,packetCopy, m_slotIndexLastOpened);
                }
               // Call the trace source
-              m_receivedPingPacket (m_mcAddress, m_address, packetCopy, m_slotIndexLastOpened);
+              m_receivedPingPacket (m_mcAddress, m_address, packetCopy, m_slotIndexLastOpened); 
             }
           else
             {
               NS_LOG_INFO ("MC packet received but device not MC enabled!");
             }
        }
+      else 
+        {
+          // Device overheared a packet not meant for it
+          m_overheardPacketCount++;
+          
+          // Fire trace source
+          m_numberOfOverhearedPackets (m_mcAddress, m_address, m_overheardPacketCount);
+        }
     }
   
   // Update Mac state
@@ -2529,7 +2575,7 @@ EndDeviceLoraMac::PingReceived(Ptr<Packet const> packet)
     }
   else
     {
-      NS_LOG_ERROR ("Invalid MAC State at the End of receiving ping!");
+      NS_ASSERT_MSG (false, "Invalid MAC State at the End of receiving ping!");
     }
 
 }
@@ -2718,7 +2764,7 @@ EndDeviceLoraMac::SetMacState (MacState macState)
           macState == MAC_PING_SLOT_BEACON_GUARD ||
           macState == MAC_RX_BEACON_GUARD)
         {
-          NS_LOG_ERROR ("Can not switch from "<< m_macState << " to " << macState << "without an intermediate state");          
+          NS_LOG_ERROR ("Can not switch from "<< m_macState << " to " << macState << " without an intermediate state");          
         }
       else
         {
@@ -2799,11 +2845,17 @@ EndDeviceLoraMac::GetBeaconRecieveWindowFrequency ()
 void
 EndDeviceLoraMac::SetPingSlotPeriodicity (uint8_t periodicity)
 {
+  
+  NS_ASSERT_MSG (m_deviceClass!=CLASS_B, "Error! Ping slot periodicity can't be set while operation");
+  
   if (periodicity < 8 || periodicity >= 0)
     {
       m_pingSlotInfo.pingSlotPeriodicity = periodicity;
       m_pingSlotInfo.pingNb = std::pow (2, (7-periodicity));
       m_pingSlotInfo.pingPeriod = 4096/(m_pingSlotInfo.pingNb);
+      
+      // Set number of pings per beacon period
+      m_pingSlotInfo.pendingPingSlotEvents.resize (m_pingSlotInfo.pingNb);
     }
   else
     {
@@ -2821,11 +2873,17 @@ EndDeviceLoraMac::GetPingSlotPeriodicity ()
 void
 EndDeviceLoraMac::SetPingNb (uint8_t pingNb)
 {
+  
+  NS_ASSERT_MSG (m_deviceClass!=CLASS_B, "Error! Ping slot periodicity can't be set while operation");
+  
   if (pingNb <= 128 || pingNb >= 1)
     {
       m_pingSlotInfo.pingNb = pingNb;
       m_pingSlotInfo.pingSlotPeriodicity = 7 - std::log2 (pingNb);
       m_pingSlotInfo.pingPeriod = 4096/pingNb;
+      
+      // Set number of pings per beacon period
+      m_pingSlotInfo.pendingPingSlotEvents.resize (m_pingSlotInfo.pingNb);
     }
   else
     {
@@ -2842,11 +2900,17 @@ EndDeviceLoraMac::GetPingNb ()
 void
 EndDeviceLoraMac::SetPingPeriod (uint pingPeriod)
 {
+  
+  NS_ASSERT_MSG (m_deviceClass!=CLASS_B, "Error! Ping slot periodicity can't be set while operation");
+  
   if (pingPeriod <= 4096 || pingPeriod >= 32)
     {
       m_pingSlotInfo.pingPeriod = pingPeriod;
       m_pingSlotInfo.pingNb = 4096/pingPeriod;
       m_pingSlotInfo.pingSlotPeriodicity = 7 - std::log2 (m_pingSlotInfo.pingNb);
+      
+      // Set number of pings per beacon period
+      m_pingSlotInfo.pendingPingSlotEvents.resize (m_pingSlotInfo.pingNb);
     }
   else
     {
@@ -2923,20 +2987,99 @@ EndDeviceLoraMac::IsMulticastEnabled (void)
 
 
 void
-EndDeviceLoraMac::EnableCoordinatedRelaying (uint32_t numberOfEndDeviceInMcGroup)
+EndDeviceLoraMac::EnableCoordinatedRelaying (uint32_t numberOfEndDeviceInMcGroup, uint8_t relayingAlgorithm)
 {
-  NS_LOG_FUNCTION (this << numberOfEndDeviceInMcGroup);
+  NS_LOG_FUNCTION (this << numberOfEndDeviceInMcGroup << relayingAlgorithm);
+  
+  if (relayingAlgorithm == 0) return; // relayingAlgorithm 0 means not using relaying at all 
   
   NS_ASSERT_MSG (numberOfEndDeviceInMcGroup > 1 ,"You can not activate coordinated relaying with only one node!");
   
-  //\TODO Check power level and pending transmissions before enabling this
+  //Register number of member nodes in a multicast group
+  m_relayPower.numberOfEndDeviceInMcGroup = numberOfEndDeviceInMcGroup;
+    
+  //Select the algorithm to use for coordinated relaying
+  m_relayPower.algorithm = relayingAlgorithm;
   
-  // Divide the maximum power with the number of nodes in the multicast group
-  m_relayPower = (m_maxBandTxPower+m_marginTxPower)/numberOfEndDeviceInMcGroup;
+  //should we add one hop as far as the network-server is in the off-time as well?
   
   // \TODO May be further decrease the m_relayPower according to device energy consumption
   
   m_relayActivated = true; 
+}
+
+double
+EndDeviceLoraMac::GetRelayingPower ()
+{
+  NS_LOG_FUNCTION_NOARGS ();
+  
+  // relay power to be used, negative number shows do not relay for now
+  double relayPower = 0;
+  
+  switch (m_relayPower.algorithm)
+    {
+    case 0:
+      NS_ASSERT_MSG (false, "Relying power not activated, yet invoked!");
+      break;
+    case 1:    // relaying with max power
+      relayPower = m_relayPower.m_maxTxPower;
+      break;
+    case 2:   // this node transmit with the probability of 1/numberOfEndDeviceInMcGroup
+      {
+        //random number generation.
+        int relayIndex = m_relayPower.decisionForRelayingRandomNumber->GetInteger (1, (uint32_t)m_relayPower.numberOfEndDeviceInMcGroup); // may be assume 50% has received packet
+      
+        //Only transmit if relayIndex is 1, that means you will transmit with the probability of 1/numberOfEndDevicesInMcGroup
+        if (relayIndex == 1)
+          {
+            relayPower = m_relayPower.m_maxTxPower;
+          }
+        else
+          {
+            relayPower = -2; // 20dbm is the maximumpower for semtech sx1272 with 31/41mA
+          }
+      
+        break;    
+      }
+    case 3:   //  the power to be used is 14dbm/(randomselection between 1 and numberOfEndDeviceInMcGroup)
+      {
+        //Randomely select a power to transmit with
+        int relayPowerDevider = m_relayPower.relayPowerRandomNumber->GetInteger (1, (uint32_t)(m_relayPower.numberOfEndDeviceInMcGroup/2));
+        // Divide the maximum power with the number of nodes in the multicast group
+        relayPower = m_relayPower.m_maxTxPower/(relayPowerDevider); //std::min ((uint32_t)10, (numberOfEndDeviceInMcGroup-1)); // 2 db is the minimum power for Semtech SX1272 with 26mA and 
+        break;     
+      }         
+    case 4:   //  the power to be used is 14dbm/(randomselection between 1 and numberOfEndDeviceInMcGroup)
+      {
+        //random number generation.
+        int relayIndex = m_relayPower.decisionForRelayingRandomNumber->GetInteger (1, (uint32_t)m_relayPower.numberOfEndDeviceInMcGroup); // may be assume 50% has received packet
+      
+        //Only transmit if relayIndex is 1, that means you will transmit with the probability of 1/numberOfEndDevicesInMcGroup
+        if (relayIndex == 1)
+          {
+            //Randomely select a power to transmit with
+            int relayPowerDevider = m_relayPower.relayPowerRandomNumber->GetInteger (1, (uint32_t)(m_relayPower.numberOfEndDeviceInMcGroup/2));
+            // Divide the maximum power with the number of nodes in the multicast group
+            relayPower = m_relayPower.m_maxTxPower/(relayPowerDevider); //std::min ((uint32_t)10, (numberOfEndDeviceInMcGroup-1)); // 2 db is the minimum power for Semtech SX1272 with 26mA and 
+          }
+        else
+          {
+            relayPower = -2; // 20dbm is the maximumpower for semtech sx1272 with 31/41mA
+          }        
+        break;     
+      }
+    case 5:        //Decrease transmit power with number of nodes
+      {
+        // Divide the maximum power with the number of nodes in the multicast group
+        relayPower = m_relayPower.m_maxTxPower/(m_relayPower.numberOfEndDeviceInMcGroup-1); //std::min ((uint32_t)10, (numberOfEndDeviceInMcGroup-1)); // 2 db is the minimum power for Semtech SX1272 with 26mA and 
+        break;      
+      }
+    default: 
+      NS_ASSERT_MSG (false, "Relaying algorithm not implimented yet!");
+      break;
+    }
+
+  return relayPower;
 }
 
 }

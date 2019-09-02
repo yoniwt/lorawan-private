@@ -22,6 +22,7 @@
 #include "ns3/log.h"
 #include "src/network/model/buffer.h"
 #include "ns3/nstime.h"
+#include "ns3/simulator.h"
 #include <bitset>
 
 namespace ns3 {
@@ -80,7 +81,7 @@ BcnPayload::Serialize (Buffer::Iterator start) const
   
   if (m_bcnTime == 0)
     {
-      NS_LOG_ERROR ("bcnTime has to be set before serializing a beacon payload.");
+      NS_ASSERT_MSG(false,"bcnTime has to be set before serializing a beacon payload.");
       return;
     }
   
@@ -199,6 +200,15 @@ BcnPayload::Deserialize (Buffer::Iterator start)
   
   //De-Allocate Part1
   delete [] part1;
+  
+  if (Simulator::Now ().GetSeconds () < m_bcnTime)
+    {
+      //The CRC just accidentally matched while the packet does not actually contain a beacon Time stamp
+      NS_LOG_DEBUG ("Beacon received can't exceed simulator time!");
+      NS_LOG_DEBUG ("The time stamp for the beacon is invalid, the crc just matched accidentally. Discard packet!");
+      m_bcnTime = 0;
+      return 0;
+    }
   
   // Part2 InfoDesc+latitude+longitude+CRC2 ( or ) GwSpecific+CRC2
   // \TODO calculate CRC2 and if it fails discard m_bcnTime also to be sure 

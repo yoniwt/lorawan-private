@@ -381,7 +381,7 @@ LoraMacHelper::SetSpreadingFactorsUp (NodeContainer endDevices, NodeContainer ga
 } //  end function
 
 std::vector<LoraDeviceAddress>
-LoraMacHelper::CreateNMulticastGroup (NodeContainer endDevices, NodeContainer gateways, uint32_t numberOfDevicesPerGroups, bool enableCoordinatedRelaying)
+LoraMacHelper::CreateNMulticastGroup (NodeContainer endDevices, NodeContainer gateways, uint32_t numberOfDevicesPerGroups, uint8_t enableCoordinatedRelaying)
 {
   NS_LOG_FUNCTION_NOARGS ();
   
@@ -410,7 +410,7 @@ LoraMacHelper::CreateNMulticastGroup (NodeContainer endDevices, NodeContainer ga
 }
 
 std::vector<LoraDeviceAddress>
-LoraMacHelper::CreateNMulticastGroup (NodeContainer endDevices, NodeContainer gateways, uint32_t numberOfDevicesPerGroups, uint8_t dr, uint8_t pingSlotPeriodicity, bool enableCoordinatedRelaying, double channel)
+LoraMacHelper::CreateNMulticastGroup (NodeContainer endDevices, NodeContainer gateways, uint32_t numberOfDevicesPerGroups, uint8_t dr, uint8_t pingSlotPeriodicity, uint8_t enableCoordinatedRelaying, double channel)
 {
   NS_LOG_FUNCTION_NOARGS ();
   
@@ -438,7 +438,7 @@ LoraMacHelper::CreateNMulticastGroup (NodeContainer endDevices, NodeContainer ga
 
 
 LoraDeviceAddress
-LoraMacHelper::CreateMulticastGroup (NodeContainer endDevices, NodeContainer gateways, bool enableCoordinatedRelaying)
+LoraMacHelper::CreateMulticastGroup (NodeContainer endDevices, NodeContainer gateways, uint8_t enableCoordinatedRelaying)
 {
   NS_LOG_FUNCTION_NOARGS ();
   
@@ -467,7 +467,7 @@ LoraMacHelper::CreateMulticastGroup (NodeContainer endDevices, NodeContainer gat
 }
 
 LoraDeviceAddress
-LoraMacHelper::CreateMulticastGroup (NodeContainer endDevices, NodeContainer gateways, uint8_t dr, uint8_t pingSlotPeriodicity, bool enableCoordinatedRelaying, double channel)
+LoraMacHelper::CreateMulticastGroup (NodeContainer endDevices, NodeContainer gateways, uint8_t dr, uint8_t pingSlotPeriodicity, uint8_t enableCoordinatedRelaying, double channel)
 {
   NS_LOG_FUNCTION_NOARGS ();
   
@@ -496,7 +496,7 @@ LoraMacHelper::CreateMulticastGroup (NodeContainer endDevices, NodeContainer gat
 }
 
 void
-LoraMacHelper::AddToMulticastGroup (Ptr<Node> endNode, LoraDeviceAddress mcDevAddr, bool enableCoordinatedRelaying, uint32_t numberOfEndDevicesinMcGroup)
+LoraMacHelper::AddToMulticastGroup (Ptr<Node> endNode, LoraDeviceAddress mcDevAddr, uint8_t enableCoordinatedRelaying, uint32_t numberOfEndDevicesinMcGroup)
 {
   NS_LOG_FUNCTION_NOARGS ();
   
@@ -519,12 +519,12 @@ LoraMacHelper::AddToMulticastGroup (Ptr<Node> endNode, LoraDeviceAddress mcDevAd
       
       NS_ASSERT_MSG (numberOfEndDevicesinMcGroup > 1, "You can not enable coordinated relaying with less than 2 end devices in a group!");
       
-      mac->EnableCoordinatedRelaying (numberOfEndDevicesinMcGroup);
+      mac->EnableCoordinatedRelaying (numberOfEndDevicesinMcGroup, enableCoordinatedRelaying);
     }
 }
 
 void
-LoraMacHelper::AddToMulticastGroup (Ptr<Node> endNode, LoraDeviceAddress mcDevAddr, uint8_t dr, uint8_t pingSlotPeriodicity, bool enableCoordinatedRelaying, uint32_t numberOfEndDevicesinMcGroup, double channel)
+LoraMacHelper::AddToMulticastGroup (Ptr<Node> endNode, LoraDeviceAddress mcDevAddr, uint8_t dr, uint8_t pingSlotPeriodicity, uint8_t enableCoordinatedRelaying, uint32_t numberOfEndDevicesinMcGroup, double channel)
 {
   NS_LOG_FUNCTION_NOARGS ();
   
@@ -552,7 +552,7 @@ LoraMacHelper::AddToMulticastGroup (Ptr<Node> endNode, LoraDeviceAddress mcDevAd
       
       NS_ASSERT_MSG (numberOfEndDevicesinMcGroup > 1, "You can not enable coordinated relaying with less than 2 end devices in a group!");
       
-      mac->EnableCoordinatedRelaying (numberOfEndDevicesinMcGroup);
+      mac->EnableCoordinatedRelaying (numberOfEndDevicesinMcGroup, enableCoordinatedRelaying);
     }  
 }
 

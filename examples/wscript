@@ -18,4 +18,10 @@ def build(bld):
     obj.source = 'simple-class-b-network-example.cc'
     
     obj = bld.create_ns3_program('class-b-network-example', ['lorawan'])
-    obj.source = 'class-b-network-example.cc'    
+    obj.source = 'class-b-network-example.cc'  
+    
+    obj = bld.create_ns3_program('class-b-network-example-relay', ['lorawan'])
+    obj.source = 'class-b-network-example-relay.cc' 
+     
+    obj = bld.create_ns3_program('class-b-network-example-beacon-skipping', ['lorawan'])
+    obj.source = 'class-b-network-example-beacon-skipping.cc'    

@@ -39,6 +39,7 @@ NetworkServerHelper::NetworkServerHelper ()
   m_classBEnabled = false;
   m_beaconEnabled = false;
   m_enableSequencedPacketGeneration = false;
+  m_pingDownlinkPacketSize = 255; // maximum packet size is used by default
 }
 
 NetworkServerHelper::~NetworkServerHelper ()
@@ -82,6 +83,19 @@ NetworkServerHelper::EnableSequencedPacketGeneration (bool enable)
   m_enableSequencedPacketGeneration = enable;
 }
 
+void
+NetworkServerHelper::SetPingDownlinkPacketSize (uint8_t pingDownlinkPacketSize)
+{
+  m_pingDownlinkPacketSize = pingDownlinkPacketSize;
+}
+
+uint8_t
+NetworkServerHelper::GetPingDownlinkPacketSize () const
+{
+  return m_pingDownlinkPacketSize;
+}
+
+
 ApplicationContainer
 NetworkServerHelper::Install (Ptr<Node> node)
 {
@@ -114,6 +128,7 @@ NetworkServerHelper::InstallPriv (Ptr<Node> node)
   app->EnableClassBDownlink (m_classBEnabled);
   app->EnableBeaconTransmission (m_beaconEnabled);
   app->EnableSequencedPacketGeneration (m_enableSequencedPacketGeneration);
+  app->SetPingDownlinkPacketSize (m_pingDownlinkPacketSize);
 
   // Cycle on each gateway
   for (NodeContainer::Iterator i = m_gateways.Begin ();

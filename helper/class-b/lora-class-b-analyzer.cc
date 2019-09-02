@@ -54,7 +54,8 @@ LoraClassBAnalyzer::LoraClassBAnalyzer (std::string filenameNs, std::string file
   m_minimumNumberOfFragementsSentbyNs (std::numeric_limits<uint32_t>::max()),
   m_totalFragementsSentbyNs (0),
   m_totalBytesSentbyNs (0),
-  m_aggregateNsThroughput (0)
+  m_aggregateNsThroughput (0),
+  m_failedPings (0)
 
 { 
   //Create two file: one for Network Server and one of the End Devices
@@ -125,6 +126,16 @@ LoraClassBAnalyzer::ConnectAllTraceSinks (NodeContainer endDevices, NodeContaine
                                                    (&LoraClassBAnalyzer::CurrentBeaconMissedRunLength, this));
       NS_ASSERT (success == true);      
       
+      success =mac->TraceConnectWithoutContext ("NumberOfOverhearedPackets",
+                                                 MakeCallback
+                                                   (&LoraClassBAnalyzer::NumberOfOverhearedPackets, this));
+      NS_ASSERT (success == true);  
+      
+      success = mac->TraceConnectWithoutContext ("FailedPings", MakeCallback 
+                                                   (&LoraClassBAnalyzer::NumberOfFailedPings, this));
+      
+      NS_ASSERT (success == true);
+      
       // We assume that there is only one application on each node
       Ptr<Application> app = (*i)->GetApplication (0);
       NS_ASSERT (app != 0);
@@ -181,6 +192,8 @@ LoraClassBAnalyzer::ConnectAllTraceSinks (NodeContainer endDevices, NodeContaine
                                          MakeCallback 
                                            (&LoraClassBAnalyzer::McPingSentCallback, this));
       NS_ASSERT (success == true);
+      
+      m_nSBeaconRelatedPerformance.networkScheduler= networkScheduler;
     }
 
 }
@@ -630,6 +643,41 @@ LoraClassBAnalyzer::CurrentBeaconMissedRunLength (LoraDeviceAddress mcAddress, L
                           
 }
 
+void
+LoraClassBAnalyzer::NumberOfOverhearedPackets (LoraDeviceAddress mcAddress, LoraDeviceAddress ucAddress, uint32_t numberOfOverheardPacket)
+{
+  NS_LOG_FUNCTION (this << mcAddress << ucAddress << numberOfOverheardPacket);
+  
+  if (m_mcEdDownlinkRelatedPerformance.find (mcAddress) == m_mcEdDownlinkRelatedPerformance.end ())
+    {
+      if (mcAddress == 1)
+        {
+          // Unicast device is not being analyzed for now
+          //\TODO  In the future add it to the unicast list 
+          NS_LOG_WARN ("Unicast devices not analyzed for now! Future update");
+          return;
+        }
+      
+       NS_ASSERT_MSG (false, "Multicast address not found");
+    }
+  
+  if (m_mcEdDownlinkRelatedPerformance.at (mcAddress).edDownlinkRelatedPerformance
+        .find (ucAddress) ==  m_mcEdDownlinkRelatedPerformance.at (mcAddress)
+                                .edDownlinkRelatedPerformance.end())
+    {
+       NS_ASSERT_MSG (false, "Device not found");  
+    }
+  
+  //Update number of overheard packet
+  m_mcEdDownlinkRelatedPerformance.at (mcAddress).edDownlinkRelatedPerformance
+      .at (ucAddress).numberOfOverhearedPackets = numberOfOverheardPacket;
+}
+
+void
+LoraClassBAnalyzer::NumberOfFailedPings (uint32_t oldValue, uint32_t newValue)
+{
+  m_failedPings = newValue;
+}
 
 ///////////////////////////
 // EndDeviceApplication //
@@ -814,7 +862,7 @@ LoraClassBAnalyzer::ProcessPreviousPacketStatus (LoraDeviceAddress mcAddress)
 //////////////
 // \TODO Add various control to print selectively
 void
-LoraClassBAnalyzer::FinalizeNsBeaconRelatedInformation (std::ostream& output)
+LoraClassBAnalyzer::FinalizeNsBeaconRelatedInformation (std::ostream& output, bool verbose)
 {
   //Finalize
   output << "Beacon Related Performance" << std::endl;
@@ -827,11 +875,140 @@ LoraClassBAnalyzer::FinalizeNsBeaconRelatedInformation (std::ostream& output)
   output << "Average number of continuous beacons skipped by Ns : " << m_nSBeaconRelatedPerformance.averageNumberOfContinuousBeaconsSkippedByNs << std::endl;
   output << "Maximum number of continuous  beacons skipped by Ns : " << m_nSBeaconRelatedPerformance.maximumNumberOfContinuousBeaconsSkippedByNs << std::endl;
   output << "Minimum number of continuous beacons skipped by Ns : " << m_nSBeaconRelatedPerformance.minimumNumberOfContinuousBeaconsSkippedByNs << std::endl;
+  
+  int numberOfMulticastGroups = m_mcEdDownlinkRelatedPerformance.size ();
+  
+  int drAverage = 0; // Average of all drs of all the multicast groups, if they all are the same it will be that number
+  //std::cout <<"Logdrs:";
+  for (auto& mcGroup : m_mcEdDownlinkRelatedPerformance)
+    {
+      drAverage += (int)mcGroup.second.dr; //std::cout << (int)mcGroup.second.dr;
+    }
+  //std::cout << std::endl<< "Log:DrSum="<< (int)drAverage << std::endl;
+  drAverage /= numberOfMulticastGroups;
+  
+  int periodicityAverage = 0; // Average of all drs of all multicast groups, if they all are the same it will be that number
+  //std::cout << "Logperiodicities:";
+  for (auto& mcGroup : m_mcEdDownlinkRelatedPerformance)
+    {
+      periodicityAverage += (int)mcGroup.second.periodicity; //std::cout << (int)mcGroup.second.periodicity;
+    }
+  //std::cout << std::endl << "Log:PeriodicitySum="<< (int)periodicityAverage << std::endl;
+  periodicityAverage /= numberOfMulticastGroups;
+  
+  uint8_t pingDownlinkPacketSize = m_nSBeaconRelatedPerformance.networkScheduler->GetPingDownlinkPacketSize ();
+  
+  // All file name will have drAverage-periodicityAverage-pingDownlinkPacket-numberOfMulticastGroups format
+  std::ofstream beaconLog; //std::to_string(groupIndex)+
+  std::string beaconLogLoc = m_verboseLocation+"BeaconBlocking/NSBeaconLog"+std::to_string ((int)drAverage)+"-"
+        +std::to_string ((int)periodicityAverage)+"-"+std::to_string ((int)pingDownlinkPacketSize) //packet size
+        +"-"+std::to_string (numberOfMulticastGroups)+".csv";
+  
+  if (verbose)
+    {
+      if (m_appendInformation)
+        {
+          beaconLog.open (beaconLogLoc, std::ofstream::out | std::ofstream::app);
+        }
+      else
+        {
+          beaconLog.open (beaconLogLoc, std::ofstream::out | std::ofstream::trunc);
+        }
+      std::cout << "Log:Dr="<< (double)drAverage << std::endl;
+      std::cout << "Log:Periodicity="<< (double)periodicityAverage << std::endl;
+      std::cout << "Log:PacketSize="<< (int)pingDownlinkPacketSize << std::endl;
+      std::cout << "Log:NumberOfMulticastGroupsRunfor="<< numberOfMulticastGroups << std::endl;
+      beaconLog << m_nSBeaconRelatedPerformance.numberOfBeaconsSentByNs << ", ";
+      beaconLog << m_nSBeaconRelatedPerformance.numberOfBeaconsSkippedByNs << ", ";
+      beaconLog << (double)m_nSBeaconRelatedPerformance.numberOfBeaconsSkippedByNs/(m_nSBeaconRelatedPerformance.numberOfBeaconsSentByNs+m_nSBeaconRelatedPerformance.numberOfBeaconsSkippedByNs) << ", ";
+      beaconLog << m_nSBeaconRelatedPerformance.averageNumberOfContinuousBeaconsSkippedByNs << ", ";
+      beaconLog << m_nSBeaconRelatedPerformance.maximumNumberOfContinuousBeaconsSkippedByNs << ", ";
+      beaconLog << m_nSBeaconRelatedPerformance.minimumNumberOfContinuousBeaconsSkippedByNs << "\n";
+      beaconLog.close ();
+      
+      //\TODO Move this later to the end-device part
+      //Logging total number of overheard packets and correctly received packets
+      // All file name will have drAverage-periodicityAverage-pingDownlinkPacket-numberOfMulticastGroups format
+      std::ofstream overhearingLog; //std::to_string(groupIndex)+
+      std::string overhearingLogLoc = m_verboseLocation+"Overhearing/OverhearingLog"+std::to_string ((int)drAverage)+"-"
+            +std::to_string ((int)periodicityAverage)+"-"+std::to_string ((int)pingDownlinkPacketSize) //packet size
+            +"-"+std::to_string (numberOfMulticastGroups)+".csv";
 
+      std::ofstream packetReceivedLog; //std::to_string(groupIndex)+
+      std::string packetReceivedLogLoc = m_verboseLocation+"Overhearing/PacketReceivedLog"+std::to_string ((int)drAverage)+"-"
+            +std::to_string ((int)periodicityAverage)+"-"+std::to_string ((int)pingDownlinkPacketSize) //packet size
+            +"-"+std::to_string (numberOfMulticastGroups)+".csv";   
+      
+      std::ofstream throughputLog; //std::to_string(groupIndex)+
+      std::string throughputLogLoc = m_verboseLocation+"throughput/throughputLog"+std::to_string ((int)drAverage)+"-"
+            +std::to_string ((int)periodicityAverage)+"-"+std::to_string ((int)pingDownlinkPacketSize) //packet size
+            +"-"+std::to_string (numberOfMulticastGroups)+".csv";        
+      if (m_appendInformation)
+        {
+          overhearingLog.open (overhearingLogLoc, std::ofstream::out | std::ofstream::app);
+          packetReceivedLog.open (packetReceivedLogLoc, std::ofstream::out | std::ofstream::app);
+          throughputLog.open (throughputLogLoc, std::ofstream::out | std::ofstream::app);
+        }
+      else
+        {
+          overhearingLog.open (overhearingLogLoc, std::ofstream::out | std::ofstream::trunc);
+          packetReceivedLog.open (packetReceivedLogLoc, std::ofstream::out | std::ofstream::trunc);    
+          throughputLog.open (throughputLogLoc, std::ofstream::out | std::ofstream::trunc);          
+        }
+      
+      double averagePacketsOverheard;
+      double averagePacketsReceived;
+      double averageThroughput;
+      
+      bool firstMulticastGroupInTheList = true;
+      //Calculate average overhearing per multicast group
+      for (auto& mcGroup : m_mcEdDownlinkRelatedPerformance)
+        {
+          averagePacketsOverheard=0;
+          averagePacketsReceived=0;
+          averageThroughput=0;
+          
+          if (firstMulticastGroupInTheList)
+            {
+              firstMulticastGroupInTheList = false;
+            }
+          else
+            {
+              overhearingLog << ", ";
+              packetReceivedLog << ", ";
+              throughputLog << ", ";
+            }
+          
+          for (auto& device : mcGroup.second.edDownlinkRelatedPerformance)
+            { 
+              std::clog << "PacketOverheard=" << device.second.numberOfOverhearedPackets << std::endl;
+              std::clog << "PacketReceived=" << device.second.totalNumberOfFragmentsReceived << std::endl;
+              averagePacketsOverheard += device.second.numberOfOverhearedPackets; 
+              averagePacketsReceived += device.second.totalNumberOfFragmentsReceived;
+              averageThroughput += device.second.throughput;
+            }          
+          //do averaging
+          averagePacketsOverheard /= mcGroup.second.edDownlinkRelatedPerformance.size ();
+          averagePacketsReceived /= mcGroup.second.edDownlinkRelatedPerformance.size ();
+          averageThroughput /= mcGroup.second.edDownlinkRelatedPerformance.size ();
+          
+          //Log the overhearing and packet as a csv
+          std::clog << "AvergePacketOverheared=" << averagePacketsOverheard << std::endl;
+          std::clog << "AveragePacketReveived=" << averagePacketsReceived << std::endl;
+          std::clog << "AVerageThroughput=" << averageThroughput << std::endl;
+          overhearingLog << averagePacketsOverheard;
+          packetReceivedLog << averagePacketsReceived;
+          throughputLog << averageThroughput;
+        }
+          overhearingLog << "\n";
+          packetReceivedLog << "\n";
+          throughputLog << "\n";
+    }
+  
 }
 
 void
-LoraClassBAnalyzer::FinalizeNsDownlinkRelatedInformation (std::ostream& output)
+LoraClassBAnalyzer::FinalizeNsDownlinkRelatedInformation (std::ostream& output, bool verbose)
 {
   output << "Class B downlink related Performance (NS)" << std::endl;
   output << "====================================" << std::endl;
@@ -865,9 +1042,9 @@ LoraClassBAnalyzer::FinalizeEdsBeaconRelatedInformation (std::ostream& output, b
       double averageBeaconLostRunLength = 0;
       uint32_t maximumBeaconLostRunLength = 0;
       uint32_t minimumBeaconLostRunLength = 0;
-    
-    
-   
+      
+
+       
       for (auto& device : mcGroup.second.edBeaconRelatedPerformance)
         {
           if (verbose)
@@ -965,6 +1142,14 @@ LoraClassBAnalyzer::FinalizeEdsDownlinkRelatedInformation (std::ostream& output,
       uint32_t minByteLostRunLength = 0;
       uint32_t maxByteLostRunLength = 0;
       
+      //performance considering only nonZeroPacket
+      double averageNonZeroPrr = 0;
+      uint32_t numberOfNonZeroPrrMembers = 0;
+      
+      double sdNonZeroPrr = 0;
+      std::list<double> nonZeroPrrs;
+      
+      
       // All file name will have groupIndex-dr-periodicity-numberOfEds format
       std::ofstream prr; 
       std::string prrLoc = m_verboseLocation+"prr"+std::to_string(groupIndex)+"-"
@@ -982,7 +1167,15 @@ LoraClassBAnalyzer::FinalizeEdsDownlinkRelatedInformation (std::ostream& output,
       std::string avgPacketLossRunLengthLoc = m_verboseLocation+"avgPacketLossRunLength"+std::to_string(groupIndex)+"-"
         +std::to_string ((int)mcGroup.second.dr)+"-"+std::to_string ((int)mcGroup.second.periodicity)
         +"-"+std::to_string (mcGroup.second.numberOfEds)+".csv";
+      
+      //Average of PRRs, SDs of PRR, About number of packets lost because of collision without considering Eds with zero PRR
+      std::ofstream prrAvgSd;
+      std::string prrAvgSdLoc = m_verboseLocation+"/summary"+"prr-prrAvgSdfaild"+std::to_string(groupIndex)+"-"
+        +std::to_string ((int)mcGroup.second.dr)+"-"+std::to_string ((int)mcGroup.second.periodicity)
+        +"-"+std::to_string (mcGroup.second.numberOfEds)+".csv"; 
       //\TODO you can add more verbose information
+      
+      
       
       if (verbose)
         {
@@ -991,7 +1184,8 @@ LoraClassBAnalyzer::FinalizeEdsDownlinkRelatedInformation (std::ostream& output,
               prr.open (prrLoc, std::ofstream::out | std::ofstream::app); 
               throughput.open (throughputLoc, std::ofstream::out | std::ofstream::app); 
               maxPacketLossRunLength.open (maxPacketLossRunLengthLoc, std::ofstream::out | std::ofstream::app); 
-              avgPacketLossRunLength.open (avgPacketLossRunLengthLoc, std::ofstream::out | std::ofstream::app);               
+              avgPacketLossRunLength.open (avgPacketLossRunLengthLoc, std::ofstream::out | std::ofstream::app);
+              prrAvgSd.open (prrAvgSdLoc, std::ofstream::out | std::ofstream::app);
             }
           else 
             {
@@ -999,6 +1193,7 @@ LoraClassBAnalyzer::FinalizeEdsDownlinkRelatedInformation (std::ostream& output,
               throughput.open (throughputLoc, std::ofstream::out | std::ofstream::trunc); 
               maxPacketLossRunLength.open (maxPacketLossRunLengthLoc, std::ofstream::out | std::ofstream::trunc); 
               avgPacketLossRunLength.open (avgPacketLossRunLengthLoc, std::ofstream::out | std::ofstream::trunc);
+              prrAvgSd.open (prrAvgSdLoc, std::ofstream::out | std::ofstream::trunc);
             }
         }
     
@@ -1088,6 +1283,10 @@ LoraClassBAnalyzer::FinalizeEdsDownlinkRelatedInformation (std::ostream& output,
               avgPacketLossRunLength << device.second.averageNumberOfSequentialFragmentsLost << ",";
             }
           
+            averageNonZeroPrr += averagePrr;
+            numberOfNonZeroPrrMembers += ((averagePrr > 0)?1:0);
+            if (averagePrr > 0) nonZeroPrrs.push_back (averagePrr);
+          
       }
       
       // close the file if verbose
@@ -1107,14 +1306,33 @@ LoraClassBAnalyzer::FinalizeEdsDownlinkRelatedInformation (std::ostream& output,
       
       NS_ASSERT_MSG (mcGroup.second.numberOfEds == numberOfDevices, "Counting of the number of Eds is not consistent");
       
-      averagePrr /= numberOfDevices;
+      averagePrr /= numberOfDevices;  
       averageThroughput /= numberOfDevices;
       averagePacketReceived /= numberOfDevices;
       averageBytesReceived /= numberOfDevices;
       averageBytesLost /= numberOfDevices;
       averagePacketLost /= numberOfDevices;   
       averagePacketLostRunLength /= numberOfDevices;
-      averageByteLostRunLength /= numberOfDevices;       
+      averageByteLostRunLength /= numberOfDevices;   
+      
+      NS_ASSERT_MSG (nonZeroPrrs.size () == numberOfNonZeroPrrMembers, "Error in counting non-zero members");
+      //Performance for non-zero prr
+      //Average
+      averageNonZeroPrr /= numberOfNonZeroPrrMembers;
+      
+      //Standard deviation
+      for (double nonZeroPrr : nonZeroPrrs)
+        {
+          sdNonZeroPrr += std::pow ((nonZeroPrr-averageNonZeroPrr), 2);
+        }
+      sdNonZeroPrr /= numberOfNonZeroPrrMembers;
+      sdNonZeroPrr = std::sqrt (sdNonZeroPrr);
+      
+      if (verbose)
+        {
+          // Add to file
+          prrAvgSd << averagePrr <<", " << averageNonZeroPrr << ", " << sdNonZeroPrr << ", " << m_failedPings << "\n";
+        }
 
     
       output << std::endl;  
@@ -1151,7 +1369,7 @@ LoraClassBAnalyzer::FinalizeEdsDownlinkRelatedInformation (std::ostream& output,
 
 
 void
-LoraClassBAnalyzer::Analayze (Time appStopTime, std::ostringstream& simulationSetup)
+LoraClassBAnalyzer::Analayze (Time appStopTime, std::ostringstream& simulationSetup, bool nsVerbose, bool edVerbose)
 {
   //Calculate throughput
   
@@ -1167,8 +1385,8 @@ LoraClassBAnalyzer::Analayze (Time appStopTime, std::ostringstream& simulationSe
   nsOutput << "Simulation Information (NS) " << std::endl;
   nsOutput << "=========================== " << std::endl;
   nsOutput << simulationSetup.str () << std::endl << std::endl;
-  FinalizeNsBeaconRelatedInformation (nsOutput);
-  FinalizeNsDownlinkRelatedInformation (nsOutput);
+  FinalizeNsBeaconRelatedInformation (nsOutput, nsVerbose);
+  FinalizeNsDownlinkRelatedInformation (nsOutput, nsVerbose);
   nsOutput << "-------------------------------------" << std::endl << std::endl;
   
   std::cout << nsOutput.str ();
@@ -1184,8 +1402,8 @@ LoraClassBAnalyzer::Analayze (Time appStopTime, std::ostringstream& simulationSe
   edOutput << "Simulation Information (ED) " << std::endl;
   edOutput << "=========================== " << std::endl;  
   edOutput << simulationSetup.str () << std::endl << std::endl;
-  FinalizeEdsBeaconRelatedInformation (edOutput, true);
-  FinalizeEdsDownlinkRelatedInformation (edOutput, true);
+  FinalizeEdsBeaconRelatedInformation (edOutput, edVerbose);
+  FinalizeEdsDownlinkRelatedInformation (edOutput, edVerbose);
   edOutput << "-------------------------------------" << std::endl << std::endl;
   
   std::cout << edOutput.str ();
