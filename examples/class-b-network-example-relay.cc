@@ -557,6 +557,9 @@ int main (int argc, char *argv[])
   //Enabling Beacon Broadcasting on the NS
   nsHelper.EnableBeaconTransmission (true);
   
+  //Set Ping Downlink Packet Size //Set maximum size for now
+  nsHelper.SetPingDownlinkPacketSize (255);
+  
   //Enable Fragmented Data Generation 
   //nsHelper.EnableSequencedPacketGeneration (true);
   
@@ -613,7 +616,7 @@ int main (int argc, char *argv[])
   // throughput-<groupIndex>-<dr>-<ping-slot periodicty>-<numberofnodes>-<filePostFix>.csv,
   // maxRunLength-<groupIndex>-<dr>-<ping-slot periodicty>-<numberofnodes>-<filePostFix>.csv,
   // avgRunLength-<groupIndex>-<dr>-<ping-slot periodicty>-<numberofnodes>-<filePostFix>.csv
-  std::string verboseLocation = "/home/yoni/matlab/MscThesis/Nakagami"+std::to_string (nakagamiM).substr (0,3)+"/LorawanClassB"+std::to_string (multicastRelaying)+"/"; //"home/yoni/matlab/LorawanClassB/";
+  std::string verboseLocation = "/home/yoni/matlab/MscThesis/MaxPacketSize/Nakagami"+std::to_string (nakagamiM).substr (0,3)+"/LorawanClassB"+std::to_string (multicastRelaying)+"/"; //"home/yoni/matlab/LorawanClassB/";
   //_mkdir(verboseLocation.c_str());
   LoraClassBAnalyzer classBAnalyzer(outputFileNameNs, outputFileNameEd, verboseLocation, append, endDevices, gateways, networkServer); 
   
