@@ -14,9 +14,6 @@ def build(bld):
     obj = bld.create_ns3_program('energy-model-example', ['lorawan'])
     obj.source = 'energy-model-example.cc'
     
-    obj = bld.create_ns3_program('simple-class-b-network-example', ['lorawan'])
-    obj.source = 'simple-class-b-network-example.cc'
-    
     obj = bld.create_ns3_program('class-b-network-example', ['lorawan'])
     obj.source = 'class-b-network-example.cc'  
     
