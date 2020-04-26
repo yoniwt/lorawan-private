@@ -7,7 +7,7 @@ This is an [ns-3](https://www.nsnam.org "ns-3 Website") module that can be used
 to perform simulations of a [LoRaWAN](http://www.lora-alliance.org/technology
 "LoRa Alliance") network.
 
-Please read the README-EXTENSION.md for the extension that is added on the orginal moudle to include 
+Please read the README-EXTENSION.md for the extension that is added on the orginal module to include 
 LoRaWAN Class B multicast. 
 
 ## Getting started ##
@@ -122,5 +122,5 @@ Publications:
   https://ieeexplore.ieee.org/abstract/document/8407095
 - Network level performances of a LoRa system (Master thesis). Available:
   http://tesi.cab.unipd.it/53740/1/dissertation.pdf
-- LoRaWAN Class B multicast: Scalablity (Master thesis). Access via:
-  http://resolver.tudelft.nl/uuid:09af41b0-28ec-40f2-b858-4cbd75edae
+- LoRaWAN Class B multicast: Scalablity (Master thesis).  Embargo Until 2020-09-26:
+  https://repository.tudelft.nl/islandora/object/uuid:09af41b0-28ec-40f2-b858-4cbd75edae0c?collection=education

@@ -51,5 +51,5 @@ the [Technical University of Delft](https://www.tudelft.nl "TU Delft homepage"),
 supervision Dr. Ir. Fernando Kuipers.
 
 Publications:
-- LoRaWAN Class B multicast: Scalablity (Master thesis). Access via:
-  http://resolver.tudelft.nl/uuid:09af41b0-28ec-40f2-b858-4cbd75edae0c
+- LoRaWAN Class B multicast: Scalablity (Master thesis).  Embargo Until 2020-09-26:
+  https://repository.tudelft.nl/islandora/object/uuid:09af41b0-28ec-40f2-b858-4cbd75edae0c?collection=education
