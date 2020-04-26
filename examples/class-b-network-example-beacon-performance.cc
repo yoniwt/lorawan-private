@@ -1,7 +1,13 @@
 /*
- * This script simulates a complex scenario with multiple gateways and end
- * devices. The metric of interest for this script is the throughput of the
- * network.
+ * This script simulates the performance of LoRaWAN Class B multicast. 
+ * It is particularly used to measure the beacon related performance. 
+ * performance. 
+ * The beacon generation performance of the LoRaWAN Network Server is also logged in csv.
+ *
+ * Note: make sure you created "ClassBResults/BeaconBlocking/" directory in the ns3 folder
+ *       to get detailed log of the result.
+ * 
+ * Example of running this script: ./waf --run "class-b-network-example-beacon-performance --realisticChannelModel=0 --nMcDevices=10 --nMcDevicesPerGroup=1 --dr=5 --periodicity=0 --append=0 --simulationTime=7200 --pingDownlinkPacketSize=27"
  */
 
 #include "ns3/end-device-lora-phy.h"
@@ -628,12 +634,10 @@ int main (int argc, char *argv[])
   std::string outputFileNameEd = outputStringEd.str ();
   
   // verboseLocation is the location for which to write the performance log for each node in a simulation 
+  // Create ClassBResults/BeaconBlocking Directory in the ns3 folder or this path to a desired location
+  // Network server beacon transmission performance will be logged 
   // Each simulation is on raw of csv
-  // prr-<groupIndex>-<dr>-<ping-slot periodicty>-<numberofnodes>-<filePostFix>.csv, 
-  // throughput-<groupIndex>-<dr>-<ping-slot periodicty>-<numberofnodes>-<filePostFix>.csv,
-  // maxRunLength-<groupIndex>-<dr>-<ping-slot periodicty>-<numberofnodes>-<filePostFix>.csv,
-  // avgRunLength-<groupIndex>-<dr>-<ping-slot periodicty>-<numberofnodes>-<filePostFix>.csv
-  std::string verboseLocation = "/home/yoni/matlab/MscThesis/LoRaWANClassBBeacon"+std::to_string (multicastRelaying)+"/"; //"home/yoni/matlab/LorawanClassB/";
+  std::string verboseLocation = "ClassBResults/BeaconBlocking/";
   LoraClassBAnalyzer classBAnalyzer(outputFileNameNs, outputFileNameEd, verboseLocation, append, endDevices, gateways, networkServer); 
   
   /**********************
@@ -660,7 +664,6 @@ int main (int argc, char *argv[])
   // Print results to file //
   ///////////////////////////
   NS_LOG_INFO ("Computing performance metrics...");
-  //helper.PrintPerformance (transientPeriods * appPeriod, appStopTime);
   std::ostringstream simulationSetup;
   simulationSetup << "Number of unicast devices = " << nUcDevices << std::endl
                   << "Number of multicast devices = " << nMcDevices << std::endl 

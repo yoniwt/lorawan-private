@@ -676,7 +676,11 @@ LoraClassBAnalyzer::NumberOfOverhearedPackets (LoraDeviceAddress mcAddress, Lora
 void
 LoraClassBAnalyzer::NumberOfFailedPings (uint32_t oldValue, uint32_t newValue)
 {
-  m_failedPings = newValue;
+  //Keep track of the maximum number of pings failed
+  if (newValue > m_failedPings)
+    {
+      m_failedPings = newValue;
+    }
 }
 
 ///////////////////////////
@@ -900,7 +904,7 @@ LoraClassBAnalyzer::FinalizeNsBeaconRelatedInformation (std::ostream& output, bo
   
   // All file name will have drAverage-periodicityAverage-pingDownlinkPacket-numberOfMulticastGroups format
   std::ofstream beaconLog; //std::to_string(groupIndex)+
-  std::string beaconLogLoc = m_verboseLocation+"BeaconBlocking/NSBeaconLog"+std::to_string ((int)drAverage)+"-"
+  std::string beaconLogLoc = m_verboseLocation+"NSBeaconLog"+std::to_string ((int)drAverage)+"-"
         +std::to_string ((int)periodicityAverage)+"-"+std::to_string ((int)pingDownlinkPacketSize) //packet size
         +"-"+std::to_string (numberOfMulticastGroups)+".csv";
   
@@ -913,6 +917,8 @@ LoraClassBAnalyzer::FinalizeNsBeaconRelatedInformation (std::ostream& output, bo
       else
         {
           beaconLog.open (beaconLogLoc, std::ofstream::out | std::ofstream::trunc);
+          //Add discription of the columns at the top of the csv
+          beaconLog << "numberOfBeaconSent, numberOfBeaconSkipped, fractionOfBeaconSkipped, averageBeaconSkippedRunLength, maximumBeaconSkippedRunLength, minimumBeaconSkippedRunLength\n";
         }
       std::cout << "Log:Dr="<< (double)drAverage << std::endl;
       std::cout << "Log:Periodicity="<< (double)periodicityAverage << std::endl;
@@ -924,85 +930,7 @@ LoraClassBAnalyzer::FinalizeNsBeaconRelatedInformation (std::ostream& output, bo
       beaconLog << m_nSBeaconRelatedPerformance.averageNumberOfContinuousBeaconsSkippedByNs << ", ";
       beaconLog << m_nSBeaconRelatedPerformance.maximumNumberOfContinuousBeaconsSkippedByNs << ", ";
       beaconLog << m_nSBeaconRelatedPerformance.minimumNumberOfContinuousBeaconsSkippedByNs << "\n";
-      beaconLog.close ();
-      
-      //\TODO Move this later to the end-device part
-      //Logging total number of overheard packets and correctly received packets
-      // All file name will have drAverage-periodicityAverage-pingDownlinkPacket-numberOfMulticastGroups format
-      std::ofstream overhearingLog; //std::to_string(groupIndex)+
-      std::string overhearingLogLoc = m_verboseLocation+"Overhearing/OverhearingLog"+std::to_string ((int)drAverage)+"-"
-            +std::to_string ((int)periodicityAverage)+"-"+std::to_string ((int)pingDownlinkPacketSize) //packet size
-            +"-"+std::to_string (numberOfMulticastGroups)+".csv";
-
-      std::ofstream packetReceivedLog; //std::to_string(groupIndex)+
-      std::string packetReceivedLogLoc = m_verboseLocation+"Overhearing/PacketReceivedLog"+std::to_string ((int)drAverage)+"-"
-            +std::to_string ((int)periodicityAverage)+"-"+std::to_string ((int)pingDownlinkPacketSize) //packet size
-            +"-"+std::to_string (numberOfMulticastGroups)+".csv";   
-      
-      std::ofstream throughputLog; //std::to_string(groupIndex)+
-      std::string throughputLogLoc = m_verboseLocation+"throughput/throughputLog"+std::to_string ((int)drAverage)+"-"
-            +std::to_string ((int)periodicityAverage)+"-"+std::to_string ((int)pingDownlinkPacketSize) //packet size
-            +"-"+std::to_string (numberOfMulticastGroups)+".csv";        
-      if (m_appendInformation)
-        {
-          overhearingLog.open (overhearingLogLoc, std::ofstream::out | std::ofstream::app);
-          packetReceivedLog.open (packetReceivedLogLoc, std::ofstream::out | std::ofstream::app);
-          throughputLog.open (throughputLogLoc, std::ofstream::out | std::ofstream::app);
-        }
-      else
-        {
-          overhearingLog.open (overhearingLogLoc, std::ofstream::out | std::ofstream::trunc);
-          packetReceivedLog.open (packetReceivedLogLoc, std::ofstream::out | std::ofstream::trunc);    
-          throughputLog.open (throughputLogLoc, std::ofstream::out | std::ofstream::trunc);          
-        }
-      
-      double averagePacketsOverheard;
-      double averagePacketsReceived;
-      double averageThroughput;
-      
-      bool firstMulticastGroupInTheList = true;
-      //Calculate average overhearing per multicast group
-      for (auto& mcGroup : m_mcEdDownlinkRelatedPerformance)
-        {
-          averagePacketsOverheard=0;
-          averagePacketsReceived=0;
-          averageThroughput=0;
-          
-          if (firstMulticastGroupInTheList)
-            {
-              firstMulticastGroupInTheList = false;
-            }
-          else
-            {
-              overhearingLog << ", ";
-              packetReceivedLog << ", ";
-              throughputLog << ", ";
-            }
-          
-          for (auto& device : mcGroup.second.edDownlinkRelatedPerformance)
-            { 
-              std::clog << "PacketOverheard=" << device.second.numberOfOverhearedPackets << std::endl;
-              std::clog << "PacketReceived=" << device.second.totalNumberOfFragmentsReceived << std::endl;
-              averagePacketsOverheard += device.second.numberOfOverhearedPackets; 
-              averagePacketsReceived += device.second.totalNumberOfFragmentsReceived;
-              averageThroughput += device.second.throughput;
-            }          
-          //do averaging
-          averagePacketsOverheard /= mcGroup.second.edDownlinkRelatedPerformance.size ();
-          averagePacketsReceived /= mcGroup.second.edDownlinkRelatedPerformance.size ();
-          averageThroughput /= mcGroup.second.edDownlinkRelatedPerformance.size ();
-          
-          //Log the overhearing and packet as a csv
-          std::clog << "AvergePacketOverheared=" << averagePacketsOverheard << std::endl;
-          std::clog << "AveragePacketReveived=" << averagePacketsReceived << std::endl;
-          std::clog << "AVerageThroughput=" << averageThroughput << std::endl;
-          overhearingLog << averagePacketsOverheard;
-          packetReceivedLog << averagePacketsReceived;
-          throughputLog << averageThroughput;
-        }
-          overhearingLog << "\n";
-          packetReceivedLog << "\n";
-          throughputLog << "\n";
+      beaconLog.close ();      
     }
   
 }
@@ -1101,6 +1029,148 @@ LoraClassBAnalyzer::FinalizeEdsDownlinkRelatedInformation (std::ostream& output,
   output << "Class B downlink related Performance (ED)" << std::endl;
   output << "=========================================" << std::endl; 
   
+  
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Average mulitcast group performance                                                                     //
+  //---------------------------------------------------------------------------------------------------------//
+  // Logging total number of overheard packets, correctly received packets, and throughput                   //
+  // for each mulitcast group in the simulation by averaging individual members in the mulitcast group.      //
+  // Each column in a file is for each multicast group.                                                      //
+  // All file name will have drAverage-periodicityAverage-pingDownlinkPacket-numberOfMulticastGroups format  //
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  
+  // Do logging only if verbose
+
+  if (verbose)
+    {
+    
+      // Preparing for logging
+ 
+      int numberOfMulticastGroups = m_mcEdDownlinkRelatedPerformance.size ();
+  
+      int drAverage = 0; // Average of all drs of all the multicast groups, if they all are the same it will be that number
+      //std::cout <<"Logdrs:";
+      for (auto& mcGroup : m_mcEdDownlinkRelatedPerformance)
+        {
+          drAverage += (int)mcGroup.second.dr; //std::cout << (int)mcGroup.second.dr;
+        }
+      //std::cout << std::endl<< "Log:DrSum="<< (int)drAverage << std::endl;
+      drAverage /= numberOfMulticastGroups;
+  
+      int periodicityAverage = 0; // Average of all drs of all multicast groups, if they all are the same it will be that number
+      //std::cout << "Logperiodicities:";
+      for (auto& mcGroup : m_mcEdDownlinkRelatedPerformance)
+        {
+          periodicityAverage += (int)mcGroup.second.periodicity; //std::cout << (int)mcGroup.second.periodicity;
+        }
+      //std::cout << std::endl << "Log:PeriodicitySum="<< (int)periodicityAverage << std::endl;
+      periodicityAverage /= numberOfMulticastGroups;
+      
+      //Logging total number of overheard packets and correctly received packets
+      // All file name will have drAverage-periodicityAverage-pingDownlinkPacket-numberOfMulticastGroups format
+      std::ofstream overhearingLog; //std::to_string(groupIndex)+
+      std::string overhearingLogLoc = m_verboseLocation+"OverhearingLog-"+std::to_string ((int)drAverage)+"-"
+            +std::to_string ((int)periodicityAverage)+"-"+std::to_string (numberOfMulticastGroups)+".csv";
+
+      std::ofstream packetReceivedLog; //std::to_string(groupIndex)+
+      std::string packetReceivedLogLoc = m_verboseLocation+"PacketReceivedLog-"+std::to_string ((int)drAverage)+"-"
+            +std::to_string ((int)periodicityAverage)+"-"+std::to_string (numberOfMulticastGroups)+".csv";   
+      
+      std::ofstream throughputLog; //std::to_string(groupIndex)+
+      std::string throughputLogLoc = m_verboseLocation+"throughputLog-"+std::to_string ((int)drAverage)+"-"
+            +std::to_string ((int)periodicityAverage)+"-"+"-"+std::to_string (numberOfMulticastGroups)+".csv";        
+      if (m_appendInformation)
+        {
+          overhearingLog.open (overhearingLogLoc, std::ofstream::out | std::ofstream::app);
+          packetReceivedLog.open (packetReceivedLogLoc, std::ofstream::out | std::ofstream::app);
+          throughputLog.open (throughputLogLoc, std::ofstream::out | std::ofstream::app);
+        }
+      else
+        {
+          overhearingLog.open (overhearingLogLoc, std::ofstream::out | std::ofstream::trunc);
+          packetReceivedLog.open (packetReceivedLogLoc, std::ofstream::out | std::ofstream::trunc);    
+          throughputLog.open (throughputLogLoc, std::ofstream::out | std::ofstream::trunc);
+          
+          //Add discription of the column at the top of the csv files
+          int multicastGroupIndex = 0;
+          for (auto& mcGroup : m_mcEdDownlinkRelatedPerformance)
+          {
+            if (multicastGroupIndex > 0)
+            {
+              overhearingLog << ",";
+              packetReceivedLog << ",";
+              throughputLog << ",";
+            }
+            overhearingLog <<"MCGroup"<<multicastGroupIndex<<"("<<mcGroup.second.numberOfEds<<"members)";
+            packetReceivedLog <<"MCGroup"<<multicastGroupIndex<<"("<<mcGroup.second.numberOfEds<<"members)";
+            throughputLog <<"MCGroup"<<multicastGroupIndex<<"("<<mcGroup.second.numberOfEds<<"members)";
+
+            multicastGroupIndex++;  
+          }
+          overhearingLog <<"\n";
+          packetReceivedLog <<"\n";
+          throughputLog <<"\n";
+        }
+      
+      double averagePacketsOverheard;
+      double averagePacketsReceived;
+      double averageThroughput;
+      
+      bool firstMulticastGroupInTheList = true;
+      //Calculate average overhearing per multicast group
+      for (auto& mcGroup : m_mcEdDownlinkRelatedPerformance)
+        {
+          averagePacketsOverheard=0;
+          averagePacketsReceived=0;
+          averageThroughput=0;
+          
+          if (firstMulticastGroupInTheList)
+            {
+              firstMulticastGroupInTheList = false;
+            }
+          else
+            {
+              overhearingLog << ", ";
+              packetReceivedLog << ", ";
+              throughputLog << ", ";
+            }
+          
+          for (auto& device : mcGroup.second.edDownlinkRelatedPerformance)
+            { 
+              // std::clog << "PacketOverheard=" << device.second.numberOfOverhearedPackets << std::endl;
+              // std::clog << "PacketReceived=" << device.second.totalNumberOfFragmentsReceived << std::endl;
+              averagePacketsOverheard += device.second.numberOfOverhearedPackets; 
+              averagePacketsReceived += device.second.totalNumberOfFragmentsReceived;
+              averageThroughput += device.second.throughput;
+            }          
+          //do averaging
+          averagePacketsOverheard /= mcGroup.second.edDownlinkRelatedPerformance.size ();
+          averagePacketsReceived /= mcGroup.second.edDownlinkRelatedPerformance.size ();
+          averageThroughput /= mcGroup.second.edDownlinkRelatedPerformance.size ();
+          
+          // Log the overhearing and packet as a csv
+          // std::clog << "AvergePacketOverheared=" << averagePacketsOverheard << std::endl;
+          // std::clog << "AveragePacketReveived=" << averagePacketsReceived << std::endl;
+          // std::clog << "AVerageThroughput=" << averageThroughput << std::endl;
+          overhearingLog << averagePacketsOverheard;
+          packetReceivedLog << averagePacketsReceived;
+          throughputLog << averageThroughput;
+        }
+          overhearingLog << "\n";
+          packetReceivedLog << "\n";
+          throughputLog << "\n";
+    }           
+  
+  
+  ///////////////////////////////////////////////////////////////////////////////////////////////////
+  // Member performance for each multicast group                                                   //
+  //-----------------------------------------------------------------------------------------------//
+  // Logging prr, throughput, maximum packet loss run lenghth, average packet loss run length      //
+  // for each member in a multicast group (indicated by a groupIndex).                             //
+  // Each column in a file is for each member that belong to the multicast group.                  //
+  // All file name will have groupIndex-dr-periodicity-numberOfEds format                          //
+  ///////////////////////////////////////////////////////////////////////////////////////////////////
+  
   int groupIndex = 0;
   
   for (auto& mcGroup : m_mcEdDownlinkRelatedPerformance)
@@ -1150,6 +1220,9 @@ LoraClassBAnalyzer::FinalizeEdsDownlinkRelatedInformation (std::ostream& output,
       std::list<double> nonZeroPrrs;
       
       
+      // Logging prr, throughput, maximum packet loss run lenghth, average packet loss run length
+      // for each member in a multicast group (indicated by a groupIndex).
+      // Each column in a file is for each member that belong to the multicast group.
       // All file name will have groupIndex-dr-periodicity-numberOfEds format
       std::ofstream prr; 
       std::string prrLoc = m_verboseLocation+"prr"+std::to_string(groupIndex)+"-"
@@ -1166,34 +1239,60 @@ LoraClassBAnalyzer::FinalizeEdsDownlinkRelatedInformation (std::ostream& output,
       std::ofstream avgPacketLossRunLength;
       std::string avgPacketLossRunLengthLoc = m_verboseLocation+"avgPacketLossRunLength"+std::to_string(groupIndex)+"-"
         +std::to_string ((int)mcGroup.second.dr)+"-"+std::to_string ((int)mcGroup.second.periodicity)
-        +"-"+std::to_string (mcGroup.second.numberOfEds)+".csv";
+        +"-"+std::to_string (mcGroup.second.numberOfEds)+".csv";        
       
-      //Average of PRRs, SDs of PRR, About number of packets lost because of collision without considering Eds with zero PRR
+      //Average of PRRs,Average of PRR (without considering Eds with 0 PRRs), SDs (without considering Eds with 0 PRRs) of PRR
       std::ofstream prrAvgSd;
-      std::string prrAvgSdLoc = m_verboseLocation+"/summary"+"prr-prrAvgSdfaild"+std::to_string(groupIndex)+"-"
+      std::string prrAvgSdLoc = m_verboseLocation+"/summary"+"prr-prr-sd"+std::to_string(groupIndex)+"-"
         +std::to_string ((int)mcGroup.second.dr)+"-"+std::to_string ((int)mcGroup.second.periodicity)
-        +"-"+std::to_string (mcGroup.second.numberOfEds)+".csv"; 
+        +"-"+std::to_string (mcGroup.second.numberOfEds)+".csv";    
+        
       //\TODO you can add more verbose information
-      
-      
       
       if (verbose)
         {
           if (m_appendInformation)
-            {
+            {  
+              // performance per member in a group
               prr.open (prrLoc, std::ofstream::out | std::ofstream::app); 
               throughput.open (throughputLoc, std::ofstream::out | std::ofstream::app); 
               maxPacketLossRunLength.open (maxPacketLossRunLengthLoc, std::ofstream::out | std::ofstream::app); 
               avgPacketLossRunLength.open (avgPacketLossRunLengthLoc, std::ofstream::out | std::ofstream::app);
-              prrAvgSd.open (prrAvgSdLoc, std::ofstream::out | std::ofstream::app);
+              prrAvgSd.open (prrAvgSdLoc, std::ofstream::out | std::ofstream::app);            
             }
           else 
             {
+              // performance per member in a group
               prr.open (prrLoc, std::ofstream::out | std::ofstream::trunc); 
               throughput.open (throughputLoc, std::ofstream::out | std::ofstream::trunc); 
               maxPacketLossRunLength.open (maxPacketLossRunLengthLoc, std::ofstream::out | std::ofstream::trunc); 
               avgPacketLossRunLength.open (avgPacketLossRunLengthLoc, std::ofstream::out | std::ofstream::trunc);
-              prrAvgSd.open (prrAvgSdLoc, std::ofstream::out | std::ofstream::trunc);
+              prrAvgSd.open (prrAvgSdLoc, std::ofstream::out | std::ofstream::trunc);      
+                    
+              //Add discription of the column at the top of the csv files
+              int multicastGroupIndex = 0;
+              for (auto& mcGroup : m_mcEdDownlinkRelatedPerformance)
+              {
+                if (multicastGroupIndex > 0)
+                {
+                  prr << ",";
+                  throughput << ",";
+                  maxPacketLossRunLength << ",";
+                  avgPacketLossRunLength << ",";    
+                }
+                prr <<"MCGroup"<<multicastGroupIndex<<"("<<mcGroup.second.numberOfEds<<"members)";
+                throughput <<"MCGroup"<<multicastGroupIndex<<"("<<mcGroup.second.numberOfEds<<"members)";
+                maxPacketLossRunLength <<"MCGroup"<<multicastGroupIndex<<"("<<mcGroup.second.numberOfEds<<"members)";
+                avgPacketLossRunLength <<"MCGroup"<<multicastGroupIndex<<"("<<mcGroup.second.numberOfEds<<"members)";
+                                              
+                multicastGroupIndex++;  
+              }
+              prr <<"\n";
+              throughput <<"\n";
+              maxPacketLossRunLength <<"\n";
+              avgPacketLossRunLength <<"\n";
+              prrAvgSd <<"Average_Prr, Average_Prr_(Not_including_zeros), Standard_Deviation_(not_including_zeros)";
+              prrAvgSd <<"\n";                                     
             }
         }
     
@@ -1331,12 +1430,10 @@ LoraClassBAnalyzer::FinalizeEdsDownlinkRelatedInformation (std::ostream& output,
       if (verbose)
         {
           // Add to file
-          prrAvgSd << averagePrr <<", " << averageNonZeroPrr << ", " << sdNonZeroPrr << ", " << m_failedPings << "\n";
+          prrAvgSd << averagePrr <<", " << averageNonZeroPrr << ", " << sdNonZeroPrr << "\n";
         }
 
-    
       output << std::endl;  
-    
       output << "averagePrr:" << averagePrr << std::endl;
       output << "minPrr:" << minPrr << std::endl;
       output << "maxPrr:" << maxPrr << std::endl;
@@ -1364,7 +1461,12 @@ LoraClassBAnalyzer::FinalizeEdsDownlinkRelatedInformation (std::ostream& output,
     
       groupIndex++;
     }
-  
+    
+    output << std::endl;
+    output << "-----------------------------------------------------------------------------------------" << std::endl;
+    output << "Number of pings failed ( maximum of all end-devices):" << m_failedPings << std::endl;
+    output << "-----------------------------------------------------------------------------------------" << std::endl;
+    output << std::endl;
 }
 
 

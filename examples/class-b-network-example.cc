@@ -1,8 +1,10 @@
 /*
- * This script simulates a complex scenario with multiple gateways and end
- * devices. The metric of interest for this script is the throughput of the
- * network.
- */
+ * This script simulates a performance of LoRaWAN Class B multicast network
+ * with a single gateway. It allows for formation of multicast groups based on
+ * the number of multicast groups and number of end-devices.
+ *
+ * Note that this just test the basic functionalites.
+ */ 
 
 #include "ns3/end-device-lora-phy.h"
 #include "ns3/lora-class-b-analyzer.h"
@@ -38,7 +40,6 @@ using namespace lorawan;
 NS_LOG_COMPONENT_DEFINE ("ClassBLorawanNetworkExample");
 
 // Network settings
-int nUcDevices = 0;//10;
 int nMcDevices = 6;//6;//20;
 int nMcDevicesPerGroup = 6;//3;//2;
 
@@ -99,9 +100,6 @@ int main (int argc, char *argv[])
   cmd.AddValue ("realisticChannelModel",
                 "Include shadowing loss and building penetration loss",
                 realisticChannelModel);  
-  cmd.AddValue ("nUcDevices",
-                "Number of unicast class B end devices to include in the simulation",
-                nUcDevices);
   cmd.AddValue ("nMcDevices",
                 "Number of multicast end devices to include in the simulation",
                 nMcDevices);
@@ -275,15 +273,6 @@ int main (int argc, char *argv[])
       mcTotalEndDevices.Create (nMcDevices);
       endDevices.Add (mcTotalEndDevices);    
     }  
-  
-  // Create unicast end nodes
-  NodeContainer ucEndDevices;  
-  
-  if (nUcDevices > 0)
-    {
-      ucEndDevices.Create (nUcDevices);
-      endDevices.Add (ucEndDevices);    
-    }
 
 //  // Uncomment this if the manual multicast group creation is uncommented
 //  endDevices.Add (mcEndDevices);
@@ -527,13 +516,13 @@ int main (int argc, char *argv[])
   if (addInfoOnFileName && !mixOfDrs && !mixOfPeriodicity)
     {
       // LoraClassBAnalyzer-Ns/Ed-numberOfUnicastNode-numberOfMulticastNode-NumberOfMulticastGroup-NumberOfCells-ETC, from the simulation setting put in the command line. 
-      outputStringNs << "ClassBAnalyzerOutput-Ns-" << nUcDevices << "-" 
+      outputStringNs << "ClassBAnalyzerOutput-Ns-" << 0 << "-" 
                      << nMcDevices << "-" << nMcDevicesPerGroup << "-"
                      << dr << "-" << periodicity << "-"
                      << radius << "-" << simulationTime << "-" 
                      << nBeaconGateways << ".txt";    
       
-      outputStringEd << "ClassBAnalyzerOutput-Ed-" << nUcDevices << "-" 
+      outputStringEd << "ClassBAnalyzerOutput-Ed-" << 0 << "-" 
                      << nMcDevices << "-" << nMcDevicesPerGroup << "-"
                      << dr << "-" << periodicity << "-"
                      << radius << "-" << simulationTime << "-" 
@@ -542,8 +531,8 @@ int main (int argc, char *argv[])
   else if (addInfoOnFileName)
     {
       //If the Drs and periodicity are not uniform, 
-      outputStringNs << "ClassBAnalyzerOutput-Ns-" << nUcDevices << "-" << nMcDevices << "-" << nMcDevicesPerGroup << "-" << radius << "-" << simulationTime << "-" << nBeaconGateways << "-" << ".txt";
-      outputStringEd << "ClassBAnalyzerOutput-Ed-" << nUcDevices << "-" << nMcDevices << "-" << nMcDevicesPerGroup << "-" << radius << "-" << simulationTime << "-" << nBeaconGateways << "-" << ".txt";
+      outputStringNs << "ClassBAnalyzerOutput-Ns-" << 0 << "-" << nMcDevices << "-" << nMcDevicesPerGroup << "-" << radius << "-" << simulationTime << "-" << nBeaconGateways << "-" << ".txt";
+      outputStringEd << "ClassBAnalyzerOutput-Ed-" << 0 << "-" << nMcDevices << "-" << nMcDevicesPerGroup << "-" << radius << "-" << simulationTime << "-" << nBeaconGateways << "-" << ".txt";
     }
   else
     {
@@ -560,7 +549,7 @@ int main (int argc, char *argv[])
   // throughput-<groupIndex>-<dr>-<ping-slot periodicty>-<numberofnodes>-<filePostFix>.csv,
   // maxRunLength-<groupIndex>-<dr>-<ping-slot periodicty>-<numberofnodes>-<filePostFix>.csv,
   // avgRunLength-<groupIndex>-<dr>-<ping-slot periodicty>-<numberofnodes>-<filePostFix>.csv
-  std::string verboseLocation = "/home/yoni/matlab/LorawanClassB-refining/"; //"home/yoni/matlab/LorawanClassB/";
+  std::string verboseLocation = "/home/yoni/GitHub/NS3/ns-allinone-3.29/ns-3.29/ClassBResults/Basic/"; //"home/yoni/matlab/LorawanClassB/";
   LoraClassBAnalyzer classBAnalyzer(outputFileNameNs, outputFileNameEd, verboseLocation, append, endDevices, gateways, networkServer); 
   
   /**********************
@@ -589,7 +578,7 @@ int main (int argc, char *argv[])
   //NS_LOG_INFO ("Computing performance metrics...");
   //helper.PrintPerformance (transientPeriods * appPeriod, appStopTime);
   std::ostringstream simulationSetup;
-  simulationSetup << "Number of unicast devices = " << nUcDevices << std::endl
+  simulationSetup << "Number of unicast devices = " << 0 << std::endl
                   << "Number of multicast devices = " << nMcDevices << std::endl 
                   << "Number of multicast groups = " << std::ceil ((double)nMcDevices/nMcDevicesPerGroup) << std::endl
                   << "Dr used if all multicast groups have same = " << dr << std::endl 

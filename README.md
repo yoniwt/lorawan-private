@@ -7,6 +7,9 @@ This is an [ns-3](https://www.nsnam.org "ns-3 Website") module that can be used
 to perform simulations of a [LoRaWAN](http://www.lora-alliance.org/technology
 "LoRa Alliance") network.
 
+Please read the README-EXTENSION.md for the extension that is added on the orginal moudle to include 
+LoRaWAN Class B multicast. 
+
 ## Getting started ##
 
 ### Prerequisites ###
@@ -61,6 +64,7 @@ The module includes the following examples:
 - `simple-lorawan-network-example`
 - `complete-lorawan-network-example`
 - `network-server-example`
+- See the README-EXTENSION.md for the exended module examples
 
 Examples can be run via the `./waf --run example-name` command.
 
@@ -89,6 +93,7 @@ gitter chat](https://gitter.im/ns-3-lorawan "lorawan Gitter chat").
 - Martina Capuzzo
 - Stefano Romagnolo
 - Michele Luvisotto
+- Yonatan Shiferaw (For the LoRaWAN Class B Multicast)
 
 ## License ##
 
@@ -102,6 +107,10 @@ the [University of Padova](https://unipd.it "Unipd homepage"), under the
 supervision of Prof. Lorenzo Vangelista, Prof. Michele Zorzi and with the help
 of Marco Centenaro.
 
+The LoRaWAN Class B multicast part was later added as part of an master's thesis
+at the [Technical University of Delft](https://www.tudelft.nl "TU Delft homepage"), 
+under the supervision of Dr. Ir. Fernando Kuipers
+
 Publications:
 - D. Magrin, M. Centenaro and L. Vangelista, "Performance evaluation of LoRa
   networks in a smart city scenario," 2017 IEEE International Conference On
@@ -113,3 +122,5 @@ Publications:
   https://ieeexplore.ieee.org/abstract/document/8407095
 - Network level performances of a LoRa system (Master thesis). Available:
   http://tesi.cab.unipd.it/53740/1/dissertation.pdf
+- LoRaWAN Class B multicast: Scalablity (Master thesis). Access via:
+  http://resolver.tudelft.nl/uuid:09af41b0-28ec-40f2-b858-4cbd75edae
