@@ -9,8 +9,9 @@ this module extends it to include LoRaWAN Class B multicast.
 * According to LoRaWAN Class B specification
   - Beaconless operation mode is implimented
   - Ping-slot randomization is included
-* There is also an option to enable a technique called "ping slot relaying" which is not part of the standard but added for research purpose
-Note: "Ping slot relaying" is a techique devoped as part of the Msc Thesis to improve the multicast performance without using the gateways.
+* There is also an option to enable a technique called "ping slot relaying" which is not part of the standard but added for research purpose.
+
+**Note**: "Ping slot relaying" is a techique devoped as part of the LoRaWAN Class B multicast scalability study to improve the multicast performance without using the gateways. (See publication in the "Acknowledgments and relevant publications" section)
 
 ## What is not in the module ##
 * Crystal clock inaccuracy has not been modeled 
@@ -19,11 +20,10 @@ Note: "Ping slot relaying" is a techique devoped as part of the Msc Thesis to im
 * Multiple gateway situation has not been fully tested yet
 
 ## TO DO ##
-* Doing this in the "What is not in the module" section 
-* Merging with the [Class-A simulator](https://github.com/signetlabdei/lorawan ns-3/src/lorawan)
+* Doing the remaining work in "What is not in the module" section. 
+* Merging with the [Class-A simulator](https://github.com/signetlabdei/lorawan)
 * Editing README.md
 * Editing documentation
-
 
 ## Author ##
  - Yonatan Shiferaw
@@ -48,7 +48,7 @@ that is used by ns-3). See the LICENSE.md file for more details.
 
 The LoRaWAN Class B multicast module extention was developed as part of a master's thesis at
 the [Technical University of Delft](https://www.tudelft.nl "TU Delft homepage"), under the
-supervision Dr. Ir. Fernando Kuipers.
+supervision [Dr. Ir. Fernando Kuipers](https://fernandokuipers.nl/).
 
 Publications:
 - LoRaWAN Class B multicast: Scalablity (Master thesis).  Embargo Until 2020-09-26:

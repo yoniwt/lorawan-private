@@ -5,9 +5,10 @@
 
 This is an [ns-3](https://www.nsnam.org "ns-3 Website") module that can be used
 to perform simulations of a [LoRaWAN](http://www.lora-alliance.org/technology
-"LoRa Alliance") network.
+"LoRa Alliance") network. The orginal module which is intended for Class A has now been extended
+for LoRaWAN Class B.
 
-Please read the README-EXTENSION.md for the extension that is added on the orginal module to include 
+Please read the `README-EXTENSION.md` for the extension that is added on the orginal module to include 
 LoRaWAN Class B multicast. 
 
 ## Getting started ##
@@ -64,7 +65,7 @@ The module includes the following examples:
 - `simple-lorawan-network-example`
 - `complete-lorawan-network-example`
 - `network-server-example`
-- See the README-EXTENSION.md for the exended module examples
+- See the `README-EXTENSION.md` for Class B example.
 
 Examples can be run via the `./waf --run example-name` command.
 
@@ -93,7 +94,7 @@ gitter chat](https://gitter.im/ns-3-lorawan "lorawan Gitter chat").
 - Martina Capuzzo
 - Stefano Romagnolo
 - Michele Luvisotto
-- Yonatan Shiferaw (For the LoRaWAN Class B Multicast)
+- Yonatan Shiferaw (For Class B extension)
 
 ## License ##
 
@@ -109,7 +110,7 @@ of Marco Centenaro.
 
 The LoRaWAN Class B multicast part was later added as part of an master's thesis
 at the [Technical University of Delft](https://www.tudelft.nl "TU Delft homepage"), 
-under the supervision of Dr. Ir. Fernando Kuipers
+under the supervision of [Dr. Ir. Fernando Kuipers](https://fernandokuipers.nl/).
 
 Publications:
 - D. Magrin, M. Centenaro and L. Vangelista, "Performance evaluation of LoRa
