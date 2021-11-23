@@ -549,7 +549,7 @@ int main (int argc, char *argv[])
   // throughput-<groupIndex>-<dr>-<ping-slot periodicty>-<numberofnodes>-<filePostFix>.csv,
   // maxRunLength-<groupIndex>-<dr>-<ping-slot periodicty>-<numberofnodes>-<filePostFix>.csv,
   // avgRunLength-<groupIndex>-<dr>-<ping-slot periodicty>-<numberofnodes>-<filePostFix>.csv
-  std::string verboseLocation = "/home/yoni/GitHub/NS3/ns-allinone-3.29/ns-3.29/ClassBResults/Basic/"; //"home/yoni/matlab/LorawanClassB/";
+  std::string verboseLocation = "ClassBResults/Basic/";
   LoraClassBAnalyzer classBAnalyzer(outputFileNameNs, outputFileNameEd, verboseLocation, append, endDevices, gateways, networkServer); 
   
   /**********************
@@ -587,7 +587,8 @@ int main (int argc, char *argv[])
                   << "SimulationTime (Seconds) = " << simulationTime << std::endl
                   << "Number of beaconing gateways = " << nBeaconGateways << std::endl;
   
-  classBAnalyzer.Analayze (appStopTime, simulationSetup, false, false);
+  classBAnalyzer.Analayze (appStopTime, simulationSetup, false, false); // no logging
+  //classBAnalyzer.Analayze (appStopTime, simulationSetup, true, true); //Log both device related and network server related informations 
 
   return 0;
 }
