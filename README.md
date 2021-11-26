@@ -9,11 +9,14 @@ to perform simulations of a [LoRaWAN](http://www.lora-alliance.org/technology
 for LoRaWAN Class B.
 
 Please read the `README-EXTENSION.md` for the extension that is added on the orginal module to include 
-LoRaWAN Class B multicast. 
+LoRaWAN Class B multicast which can also be used for LoRaWAN Class B unicast by using multicast groups with one member.
+The Class B module also impliments the "Ping-slot relaying" algorithm proposed in [4] and [5] to improve multicast performance. 
 
 ## Getting started ##
 
 ### Prerequisites ###
+
+Please see `README-EXTENSION.md` for running this this module with ns-3.29. 
 
 To run simulations using this module, you will need to install ns-3, and clone
 this repository inside the `src` directory:
@@ -113,15 +116,18 @@ at the [Technical University of Delft](https://www.tudelft.nl "TU Delft homepage
 under the supervision of [Dr. Ir. Fernando Kuipers](https://fernandokuipers.nl/).
 
 Publications:
-- D. Magrin, M. Centenaro and L. Vangelista, "Performance evaluation of LoRa
+- [1] D. Magrin, M. Centenaro and L. Vangelista, "Performance evaluation of LoRa
   networks in a smart city scenario," 2017 IEEE International Conference On
   Communications (ICC), Paris, 2017. Available:
   http://ieeexplore.ieee.org/document/7996384/
-- M. Capuzzo, D. Magrin and A. Zanella, "Confirmed traffic in LoRaWAN: Pitfalls
+- [2] M. Capuzzo, D. Magrin and A. Zanella, "Confirmed traffic in LoRaWAN: Pitfalls
   and countermeasures," 2018 17th Annual Mediterranean Ad Hoc Networking
   Workshop (Med-Hoc-Net), Capri, 2018. Available:
   https://ieeexplore.ieee.org/abstract/document/8407095
-- Network level performances of a LoRa system (Master thesis). Available:
+- [3] Network level performances of a LoRa system (Master thesis). Available:
   http://tesi.cab.unipd.it/53740/1/dissertation.pdf
-- LoRaWAN Class B multicast: Scalablity (Master thesis).  Embargo Until 2020-09-26:
+- [4] LoRaWAN Class B multicast: Scalablity (Master thesis).
   https://repository.tudelft.nl/islandora/object/uuid:09af41b0-28ec-40f2-b858-4cbd75edae0c?collection=education
+- [5] Y. Shiferaw, A. Arora, and F. Kuipers. LoRaWAN Class B Multicast Scalability. In IFIP
+Networking Conference, pages 609–613, Jun 2020.
+https://ieeexplore.ieee.org/document/9142813
