@@ -25,6 +25,10 @@ this module extends it to include LoRaWAN Class B multicast.
 * Editing `README.md`.
 * Updating documentation.
 
+## Detailed Architecture and documentation ##
+
+The detailed architecture and the discription of the module including the limitations of the module are detailed in Chapter 3 of the LoRaWAN Class B multicast: Scalablity (Master thesis). (See publication in the "Acknowledgments and relevant publications" section)
+
 ## Author ##
  - Yonatan Shiferaw
 
