@@ -28,6 +28,41 @@ this module extends it to include LoRaWAN Class B multicast.
 ## Author ##
  - Yonatan Shiferaw
 
+## Prerequisite and building 
+
+Since this module is written for version 3.29 it does not work with the latest branch. You can build for version 3.29 as follows. 
+
+```
+wget https://www.nsnam.org/releases/ns-allinone-3.29.tar.bz2
+
+tar -xvf ns-allinone-3.29.tar.bz2
+
+cd ns-allinone-3.29/
+
+cd ns-3.29/
+
+git clone https://github.com/yoniwt/lorawan-private.git src/lorawan
+
+./waf configure --enable-tests --enable-examples
+
+./waf build
+```
+
+## Creating a directory for logging (optional) 
+
+The examples generate a log file and you can create the directories as follows in `ns-29/` directory for the log files. 
+
+```
+ mkdir ClassBResults
+
+ mkdir ClassBResults/MulticastGroupPerformance/
+
+ mkdir ClassBResults/Basic/
+
+ mkdir ClassBResults/BeaconBlocking
+```
+
+
 ## Usage examples ##
 
 The module includes the following examples:
@@ -37,7 +72,8 @@ The module includes the following examples:
 - `class-b-network-example-multicast-performance`
 
 Examples can be run via the `./waf --run example-name` command.
-See the comment on the top of the script for more detail.
+See the comment on the top of the script for more detail and arguments to use.
+
 
 ## License ##
 
@@ -51,5 +87,7 @@ the [Technical University of Delft](https://www.tudelft.nl "TU Delft homepage"),
 supervision [Dr. Ir. Fernando Kuipers](https://fernandokuipers.nl/).
 
 Publications:
-- LoRaWAN Class B multicast: Scalablity (Master thesis).  Embargo Until 2020-09-26:
+- LoRaWAN Class B multicast: Scalablity (Master thesis).
   https://repository.tudelft.nl/islandora/object/uuid:09af41b0-28ec-40f2-b858-4cbd75edae0c?collection=education
+- Y. Shiferaw, A. Arora, and F. Kuipers. LoRaWAN Class B Multicast Scalability. In IFIP Networking Conference, pages 609–613, Jun 2020.
+  https://ieeexplore.ieee.org/document/9142813
