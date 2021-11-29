@@ -17,6 +17,7 @@ The Class B module also impliments the "Ping-slot relaying" algorithm proposed i
 ### Prerequisites ###
 
 Please see `README-EXTENSION.md` for running this this module with ns-3.29. 
+Currently the following steps in this subsection do not work for this version of module. For the following to work, this code need to be ported and merged to the latest version of the [Class-A simulator](https://github.com/signetlabdei/lorawan).
 
 To run simulations using this module, you will need to install ns-3, and clone
 this repository inside the `src` directory:
